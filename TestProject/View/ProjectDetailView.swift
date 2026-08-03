@@ -111,7 +111,7 @@ struct ProjectDetailView: View {
                     .foregroundColor(.white)
                     .padding()
                     .frame(maxWidth: .infinity)
-                    .background(Color.blue)
+                    .background(Color.universe)
                     .cornerRadius(12)
                     .padding(.horizontal, 20)
                     .padding(.vertical, 16)

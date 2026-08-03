@@ -68,7 +68,7 @@ struct ProjectListView: View {
                         .foregroundColor(.white)
                         .padding()
                         .frame(maxWidth: .infinity)
-                        .background(Color.blue)
+                        .background(Color.universe)
                         .cornerRadius(16)
                         .padding(.horizontal, 20)
                         .padding(.vertical, 16)
