@@ -11,7 +11,7 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		0F23456B302037280040A437 /* TestProject */ = {
+		0F6507BB30204BB2004BE986 /* TestProject */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = TestProject;
 			sourceTree = "<group>";
@@ -32,7 +32,7 @@
 		0F234560302037280040A437 = {
 			isa = PBXGroup;
 			children = (
-				0F23456B302037280040A437 /* TestProject */,
+				0F6507BB30204BB2004BE986 /* TestProject */,
 				0F23456A302037280040A437 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -61,7 +61,7 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				0F23456B302037280040A437 /* TestProject */,
+				0F6507BB30204BB2004BE986 /* TestProject */,
 			);
 			name = TestProject;
 			packageProductDependencies = (
@@ -251,6 +251,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 5S254YA449;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -282,6 +283,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 5S254YA449;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
