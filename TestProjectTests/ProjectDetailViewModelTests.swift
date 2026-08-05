@@ -11,7 +11,7 @@ final class ProjectDetailViewModelTests: XCTestCase {
     
     var viewModel: ProjectDetailViewModel!
     var mockNetworkManager: MockNetworkManager!
-    let testLocalKey = "saved_project_detail_99"
+    let testLocalKey = AppConstants.UserDefaultsKeys.savedProjectDetail(projectId: 99)
     
     override func setUp() {
         super.setUp()
