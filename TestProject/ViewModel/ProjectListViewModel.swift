@@ -86,7 +86,7 @@ class ProjectListViewModel: ObservableObject {
         do {
             let encoder = JSONEncoder()
             let data = try encoder.encode(projectsList)
-            UserDefaults.standard.set(data, forKey: localProjectsKey)
+            UserDefaults.standard.set(data, forKey: AppConstants.UserDefaultsKeys.savedLocalProjects)
             print("Đã lưu thành công danh sách dự án cục bộ.")
         } catch {
             print("Lỗi mã hóa dữ liệu dự án: \(error)")
@@ -102,7 +102,7 @@ class ProjectListViewModel: ObservableObject {
     ///
     /// - Returns: Mảng chứa các đối tượng `Project` đã lưu, hoặc mảng rỗng nếu chưa có/lỗi.
     private func getLocalProjectsFromStorage() -> [Project] {
-        guard let data = UserDefaults.standard.data(forKey: localProjectsKey) else {
+        guard let data = UserDefaults.standard.data(forKey: AppConstants.UserDefaultsKeys.savedLocalProjects) else {
             return []
         }
         do {

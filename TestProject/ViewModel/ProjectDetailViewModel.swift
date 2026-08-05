@@ -91,7 +91,8 @@ class ProjectDetailViewModel: ObservableObject {
         self.saveStatus = "Đang lưu..."
         do {
             let data = try JSONEncoder().encode(detail)
-            UserDefaults.standard.set(data, forKey: "saved_project_detail_\(projectId)")
+            let key = AppConstants.UserDefaultsKeys.savedProjectDetail(projectId: projectId)
+            UserDefaults.standard.set(data, forKey: key)
             let formatter = DateFormatter()
             formatter.dateFormat = "HH:mm:ss"
             self.saveStatus = "Đã lưu cục bộ lúc \(formatter.string(from: Date()))"
@@ -102,7 +103,8 @@ class ProjectDetailViewModel: ObservableObject {
     }
     
     private func loadProjectFromLocalStorage() -> ProjectDetail? {
-        guard let data = UserDefaults.standard.data(forKey: "saved_project_detail_\(projectId)") else {
+        let key = AppConstants.UserDefaultsKeys.savedProjectDetail(projectId: projectId)
+        guard let data = UserDefaults.standard.data(forKey: key) else {
             return nil
         }
         do {

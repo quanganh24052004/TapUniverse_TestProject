@@ -8,7 +8,7 @@
 import Foundation
 
 // Model của Project
-struct Project: Identifiable, Codable {
+struct Project: Identifiable, Codable, Equatable {
     let id: Int
     let name: String
 }
@@ -19,7 +19,7 @@ struct ProjectResponse: Codable {
 }
 
 // Khung chứa tọa độ và kích thước tuyệt đối của ảnh
-struct FrameRect: Codable {
+struct FrameRect: Codable, Equatable {
     var x: Double
     var y: Double
     var width: Double
@@ -27,7 +27,7 @@ struct FrameRect: Codable {
 }
 
 //Model quản lý từng bức ảnh trên Canvas
-struct PhotoFrame: Identifiable, Codable {
+struct PhotoFrame: Identifiable, Codable, Equatable {
     var id = UUID()
     let url: String
     var frame: FrameRect

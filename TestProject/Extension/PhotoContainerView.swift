@@ -13,12 +13,20 @@ class PhotoContainerView: UIView {
     var photoId: UUID
     weak var coordinator: InteractiveCanvasView.Coordinator?
     
+    var currentPhotoData: PhotoFrame?
+    var isSelected: Bool = false
+    
     var activeInteractionsCount = 0
     var isInteracting: Bool { return activeInteractionsCount > 0 } // Cờ đánh dấu để chặn ghi đè từ SwiftUI khi người dùng đang thao tác
     
     let imageView = UIImageView()
     let deleteButton = UIButton(type: .system)
     var cornerHandles: [UIView] = []
+    
+    // Lưu tham chiếu các cử chỉ để bật/tắt (nhường Touch cho UIScrollView)
+    private var panGesture: UIPanGestureRecognizer!
+    private var pinchGesture: UIPinchGestureRecognizer!
+    private var rotationGesture: UIRotationGestureRecognizer!
     
     var initialCenter = CGPoint.zero
     var initialBounds = CGRect.zero
@@ -79,9 +87,15 @@ class PhotoContainerView: UIView {
     }
     
     private func loadPhoto(url: String) {
+        if let cachedImage = ImageCacheManager.shared.getImage(forKey: url) {
+            self.imageView.image = cachedImage
+            return
+        }
+        
         guard let imageURL = URL(string: url) else { return }
         URLSession.shared.dataTask(with: imageURL) { [weak self] data, _, _ in
             if let data = data, let image = UIImage(data: data) {
+                ImageCacheManager.shared.saveImage(image, forKey: url)
                 DispatchQueue.main.async {
                     self?.imageView.image = image
                 }
@@ -153,6 +167,18 @@ extension PhotoContainerView {
     
     // SwiftUI -> UIKit
     func update(with photo: PhotoFrame, isSelected: Bool) {
+        if self.currentPhotoData == photo && self.isSelected == isSelected {
+            return // Tối ưu hoá: Bỏ qua nếu dữ liệu không có gì thay đổi
+        }
+        
+        self.currentPhotoData = photo
+        self.isSelected = isSelected
+        
+        // Bật/tắt cử chỉ để tránh "nuốt" thao tác cuộn (Scroll) của nền
+        panGesture?.isEnabled = isSelected
+        pinchGesture?.isEnabled = isSelected
+        rotationGesture?.isEnabled = isSelected
+        
         bounds = CGRect(x: 0, y: 0, width: photo.frame.width, height: photo.frame.height)
         center = CGPoint(x: photo.frame.x + photo.frame.width/2, y: photo.frame.y + photo.frame.height/2)
         transform = CGAffineTransform(rotationAngle: CGFloat(Angle(degrees: photo.rotation).radians))
@@ -205,17 +231,20 @@ extension PhotoContainerView: UIGestureRecognizerDelegate {
         let tap = UITapGestureRecognizer(target: self, action: #selector(handleTap(_:)))
         addGestureRecognizer(tap)
         
-        let pan = UIPanGestureRecognizer(target: self, action: #selector(handlePan(_:)))
-        pan.delegate = self
-        addGestureRecognizer(pan)
+        panGesture = UIPanGestureRecognizer(target: self, action: #selector(handlePan(_:)))
+        panGesture.delegate = self
+        panGesture.isEnabled = false
+        addGestureRecognizer(panGesture)
         
-        let pinch = UIPinchGestureRecognizer(target: self, action: #selector(handlePinch(_:)))
-        pinch.delegate = self
-        addGestureRecognizer(pinch)
+        pinchGesture = UIPinchGestureRecognizer(target: self, action: #selector(handlePinch(_:)))
+        pinchGesture.delegate = self
+        pinchGesture.isEnabled = false
+        addGestureRecognizer(pinchGesture)
         
-        let rotation = UIRotationGestureRecognizer(target: self, action: #selector(handleRotation(_:)))
-        rotation.delegate = self
-        addGestureRecognizer(rotation)
+        rotationGesture = UIRotationGestureRecognizer(target: self, action: #selector(handleRotation(_:)))
+        rotationGesture.delegate = self
+        rotationGesture.isEnabled = false
+        addGestureRecognizer(rotationGesture)
     }
     
     @objc func handleTap(_ gesture: UITapGestureRecognizer) {
