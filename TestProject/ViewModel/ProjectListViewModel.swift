@@ -1,8 +1,6 @@
 //
-//  ProjectStore.swift
+//  ProjectListViewModel.swift
 //  TestProject
-//
-//  Created by quanganh on 3/8/26.
 //
 
 import Foundation
@@ -10,16 +8,19 @@ import SwiftUI
 import Combine
 
 @MainActor
-class ProjectViewModel: ObservableObject {
+class ProjectListViewModel: ObservableObject {
     @Published var projects: [Project] = []
-    @Published var selectedProjectDetail: ProjectDetail? = nil
     @Published var isLoading: Bool = false
     @Published var errorMessage: String? = nil
     
     // Khóa lưu trữ trong UserDefaults
     private let localProjectsKey = "saved_local_projects"
     
-    init() {
+    // Dependency Injection cho Network
+    private let networkService: NetworkServiceProtocol
+    
+    init(networkService: NetworkServiceProtocol = NetworkManager.shared) {
+        self.networkService = networkService
         // Khởi tạo và tự động tải danh sách đã lưu cục bộ lên trước để UI hiển thị tức thì
         loadProjectsFromLocalStorage()
     }
@@ -29,7 +30,7 @@ class ProjectViewModel: ObservableObject {
         isLoading = true
         errorMessage = nil
         do {
-            let apiProjects = try await NetworkManager.shared.fetchProjects()
+            let apiProjects = try await networkService.fetchProjects()
             
             // Hợp nhất dữ liệu: Giữ lại cả dự án từ API và các dự án do user tự tạo cục bộ
             let localSaved = getLocalProjectsFromStorage()
@@ -50,41 +51,6 @@ class ProjectViewModel: ObservableObject {
             loadProjectsFromLocalStorage()
             print("Không thể tải danh sách dự án từ API, sử dụng dữ liệu cục bộ: \(error)")
             self.errorMessage = "Không thể kết nối API. Đang hiển thị dữ liệu cục bộ."
-        }
-        isLoading = false
-    }
-    
-    // Gọi API lấy thông tin chi tiết Canvas cho Screen 2
-    func loadProjectDetail(projectId: Int) async {
-        isLoading = true
-        errorMessage = nil
-        do {
-            self.selectedProjectDetail = try await NetworkManager.shared.fetchProjectDetail(projectId: projectId)
-        } catch {
-            // Sửa lỗi chức năng Thêm dự án mới:
-            // Do dự án mới tạo cục bộ chưa tồn tại trên server, API sẽ trả về lỗi (404/decode error).
-            // Ta sẽ tạo một ProjectDetail rỗng làm fallback để người dùng bắt đầu vẽ Canvas.
-            if let project = projects.first(where: { $0.id == projectId }) {
-                self.selectedProjectDetail = ProjectDetail(id: projectId, name: project.name, photos: [])
-                print("Đã tạo fallback Canvas trống cho dự án mới: \(project.name)")
-            } else {
-                self.errorMessage = "Không thể tải dữ liệu chi tiết của dự án."
-                print("Error: \(error)")
-            }
-        }
-        isLoading = false
-    }
-    
-    // Gọi API lưu thông tin dự án khi đóng (Giai đoạn 6)
-    func saveProject() async {
-        guard let projectDetail = selectedProjectDetail else { return }
-        isLoading = true
-        do {
-            try await NetworkManager.shared.saveProjectDetail(projectDetail: projectDetail)
-            print("Đã lưu dự án thành công: \(projectDetail.name)")
-        } catch {
-            self.errorMessage = "Lỗi khi lưu dự án."
-            print("Save Error: \(error)")
         }
         isLoading = false
     }

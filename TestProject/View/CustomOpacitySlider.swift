@@ -15,15 +15,6 @@ struct CustomOpacitySlider: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-//            HStack {
-//                Text("Độ mờ ảnh (Opacity):")
-//                    .font(.system(.subheadline, design: .rounded))
-//                    .foregroundColor(.secondary)
-//                Text("\(Int(opacity * 100))%")
-//                    .font(.system(.subheadline, design: .rounded))
-//                    .bold()
-//            }
-//            .padding(.horizontal)
             
             GeometryReader { geometry in
                 let width = geometry.size.width

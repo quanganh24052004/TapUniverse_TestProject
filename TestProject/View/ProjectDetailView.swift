@@ -8,8 +8,7 @@
 import SwiftUI
 
 struct ProjectDetailView: View {
-    let projectId: Int
-    @ObservedObject var viewModel: ProjectViewModel
+    @StateObject var viewModel: ProjectDetailViewModel
     @Environment(\.dismiss) var dismiss
     
     @State private var selectedPhotoId: UUID? = nil
@@ -79,10 +78,9 @@ struct ProjectDetailView: View {
                     }
                 }
                 .clipShape(Rectangle())
-                .task(id: projectId) {
-                    // Sửa lỗi: Chỉ tải lại nếu đang mở một dự án khác với dự án lưu trong bộ nhớ tạm
-                    if viewModel.selectedProjectDetail?.id != projectId {
-                        await viewModel.loadProjectDetail(projectId: projectId)
+                .task(id: viewModel.projectId) {
+                    if viewModel.selectedProjectDetail?.id != viewModel.projectId {
+                        await viewModel.loadProjectDetail()
                     }
                 }
                 // Lưu kích thước thật của Canvas để phục vụ lúc kết xuất đồ họa
@@ -120,7 +118,7 @@ struct ProjectDetailView: View {
         .navigationBarBackButtonHidden(true)
         .sheet(isPresented: $isShowingPhotoPicker) {
             CustomPhotoPicker { selectedUrls in
-                addPhotosToCanvas(urls: selectedUrls)
+                viewModel.addPhotos(urls: selectedUrls, into: &$selectedPhotoId.wrappedValue)
             }
         }
         // HIỂN THỊ TRÌNH CHIA SẺ HỆ THỐNG KHI ĐÃ RENDER XONG JPEG
@@ -131,40 +129,14 @@ struct ProjectDetailView: View {
         }
     }
     
-    // Thêm ảnh vào Canvas
-    private func addPhotosToCanvas(urls: [String]) {
-        for url in urls {
-            let newPhoto = PhotoFrame(
-                url: url,
-                frame: FrameRect(x: 0, y: 0, width: 150, height: 150),
-                rotation: 0.0,
-                opacity: 1.0
-            )
-            viewModel.selectedProjectDetail?.photos.append(newPhoto)
-            selectedPhotoId = newPhoto.id
-        }
-    }
-    
     // GỌI KẾT XUẤT ĐỒ HỌA SANG JPEG & CHIA SẺ
     private func exportCanvas() {
-        guard let photos = viewModel.selectedProjectDetail?.photos, !photos.isEmpty else { return }
-        
         isExporting = true
-        
-        DispatchQueue.global(qos: .userInitiated).async {
-            let renderSize = CGSize(width: 1024, height: 1024)
-            if let jpegData = CanvasRenderer.renderToJPEG(photos: photos, canvasSize: renderSize),
-               let uiImage = UIImage(data: jpegData) {
-                
-                DispatchQueue.main.async {
-                    self.exportItem = uiImage
-                    self.isExporting = false
-                    self.isShowingShareSheet = true
-                }
-            } else {
-                DispatchQueue.main.async {
-                    self.isExporting = false
-                }
+        viewModel.exportCanvas { image in
+            self.exportItem = image
+            self.isExporting = false
+            if image != nil {
+                self.isShowingShareSheet = true
             }
         }
     }

@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct ProjectListView: View {
-    @StateObject var viewModel = ProjectViewModel()
+    @StateObject var viewModel = ProjectListViewModel()
     @State private var isShowingAddSheet = false
     
     var body: some View {
@@ -48,7 +48,7 @@ struct ProjectListView: View {
                 } else {
                     List {
                         ForEach(viewModel.projects) { project in
-                            NavigationLink(destination: ProjectDetailView(projectId: project.id, viewModel: viewModel)) {
+                            NavigationLink(destination: ProjectDetailView(viewModel: ProjectDetailViewModel(projectId: project.id, projectName: project.name))) {
                                 ProjectRow(project: project)
                             }
                         }

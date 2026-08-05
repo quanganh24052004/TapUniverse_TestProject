@@ -13,7 +13,13 @@ enum NetworkError: Error {
     case decodingError
 }
 
-class NetworkManager {
+protocol NetworkServiceProtocol {
+    func fetchProjects() async throws -> [Project]
+    func fetchProjectDetail(projectId: Int) async throws -> ProjectDetail
+    func saveProjectDetail(projectDetail: ProjectDetail) async throws
+}
+
+class NetworkManager: NetworkServiceProtocol {
     static let shared = NetworkManager()
     private init() {}
     
