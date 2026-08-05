@@ -70,9 +70,9 @@ struct ProjectListView: View {
                         .frame(maxWidth: .infinity)
                         .background(Color.universe)
                         .cornerRadius(16)
-                        .padding(.horizontal, 20)
-                        .padding(.vertical, 16)
                 }
+                .padding(.horizontal, 20)
+                .padding(.vertical, 16)
             }
             .navigationTitle("Projects")
             .task {

@@ -58,7 +58,7 @@ struct CustomOpacitySlider: View {
             .padding(.horizontal)
         }
         .padding(.vertical, 12)
-        .background(Color(.systemBackground).cornerRadius(12).shadow(radius: 2))
+        .background(Color(.clear))
         .padding(.horizontal)
     }
     

@@ -119,9 +119,9 @@ struct ProjectDetailView: View {
                     .frame(maxWidth: .infinity)
                     .background(Color.universe)
                     .cornerRadius(12)
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 16)
             }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 16)
         }
         .navigationBarBackButtonHidden(true)
         .sheet(isPresented: $isShowingPhotoPicker) {
