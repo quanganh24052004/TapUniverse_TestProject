@@ -25,14 +25,12 @@ struct InteractiveCanvasView: UIViewRepresentable {
         scrollView.showsVerticalScrollIndicator = false
         scrollView.backgroundColor = .clear
         
-        // Giả lập không gian làm việc rộng rãi cho Canvas
         let containerView = UIView(frame: CGRect(x: 0, y: 0, width: 1000, height: 1000))
         containerView.backgroundColor = .canvas
         containerView.clipsToBounds = true
         scrollView.addSubview(containerView)
         scrollView.contentSize = containerView.bounds.size
         
-        // Cuộn khung hiển thị về góc trên cùng bên trái (0, 0)
         DispatchQueue.main.async {
             scrollView.contentOffset = CGPoint.zero
         }
@@ -40,7 +38,6 @@ struct InteractiveCanvasView: UIViewRepresentable {
         context.coordinator.containerView = containerView
         context.coordinator.scrollView = scrollView
         
-        // Tap vào khoảng trống để hủy chọn ảnh
         let tapGesture = UITapGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.handleBackgroundTap(_:)))
         tapGesture.cancelsTouchesInView = false
         tapGesture.delegate = context.coordinator
@@ -69,7 +66,6 @@ struct InteractiveCanvasView: UIViewRepresentable {
         }
         
         func scrollViewDidZoom(_ scrollView: UIScrollView) {
-            // Tính toán khoảng trống còn dư để đẩy Canvas vào giữa màn hình
             let offsetX = max((scrollView.bounds.width - scrollView.contentSize.width) * 0.5, 0)
             let offsetY = max((scrollView.bounds.height - scrollView.contentSize.height) * 0.5, 0)
             scrollView.contentInset = UIEdgeInsets(top: offsetY, left: offsetX, bottom: 0, right: 0)
@@ -87,9 +83,8 @@ struct InteractiveCanvasView: UIViewRepresentable {
         }
         
         func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldReceive touch: UITouch) -> Bool {
-            // Theo chuẩn OOP Hit-Testing: PhotoContainerView đã gom mọi touch về chính nó
             if touch.view is PhotoContainerView || touch.view is UIButton {
-                return false // Nếu là ảnh hoặc nút bấm thì chặn gesture Tap của nền
+                return false
             }
             return true
         }
@@ -97,7 +92,6 @@ struct InteractiveCanvasView: UIViewRepresentable {
         func update(photos: [PhotoFrame], selectedPhotoId: UUID?) {
             guard let containerView = containerView else { return }
             
-            // 1. Xóa các view tương ứng với ảnh đã bị xóa khỏi mảng
             let photoIds = Set(photos.map { $0.id })
             for (id, view) in photoViews {
                 if !photoIds.contains(id) {
@@ -106,7 +100,6 @@ struct InteractiveCanvasView: UIViewRepresentable {
                 }
             }
             
-            // 2. Thêm mới hoặc cập nhật view hiện có
             for photo in photos {
                 if let existingView = photoViews[photo.id] {
                     // Tránh cập nhật giao diện ngược lại nếu đang tương tác bằng UIKit (gesture đang chạy)
@@ -123,7 +116,12 @@ struct InteractiveCanvasView: UIViewRepresentable {
             }
         }
         
-        // Đồng bộ dữ liệu từ UIKit về SwiftUI Binding
+        /// Đồng bộ dữ liệu toạ độ và góc xoay từ UIKit về SwiftUI `@Binding`.
+        ///
+        /// - Parameters:
+        ///   - id: ID của ảnh cần cập nhật.
+        ///   - newFrame: Khung toạ độ mới (FrameRect).
+        ///   - newRotation: Góc xoay mới (Double).
         func updatePhotoFrame(id: UUID, newFrame: FrameRect, newRotation: Double) {
             if let index = parent.photos.firstIndex(where: { $0.id == id }) {
                 DispatchQueue.main.async {

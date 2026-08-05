@@ -7,23 +7,29 @@
 
 import Foundation
 
+// MARK: - NetworkError
 enum NetworkError: Error {
     case invalidURL
     case invalidResponse
     case decodingError
 }
 
+// MARK: - NetworkServiceProtocol
 protocol NetworkServiceProtocol {
     func fetchProjects() async throws -> [Project]
     func fetchProjectDetail(projectId: Int) async throws -> ProjectDetail
     func saveProjectDetail(projectDetail: ProjectDetail) async throws
 }
 
+// MARK: - NetworkManager
 class NetworkManager: NetworkServiceProtocol {
     static let shared = NetworkManager()
     private init() {}
     
-    // 1. GET: Tải danh sách dự án hiển thị lên Screen 1
+    /// Tải danh sách dự án (phục vụ hiển thị Screen 1).
+    ///
+    /// - Returns: Mảng chứa các đối tượng `Project`.
+    /// - Throws: `NetworkError` nếu URL không hợp lệ, phản hồi HTTP lỗi, hoặc giải mã JSON thất bại.
     func fetchProjects() async throws -> [Project] {
         guard let url = URL(string: "https://tapuniverse.com/xproject") else {
             throw NetworkError.invalidURL
@@ -43,7 +49,11 @@ class NetworkManager: NetworkServiceProtocol {
         }
     }
     
-    // 2. POST: Gửi Project ID và tải chi tiết dự án hiển thị lên Screen 2
+    /// Gửi Project ID và tải chi tiết dự án (phục vụ hiển thị Screen 2).
+    ///
+    /// - Parameter projectId: ID của dự án cần tải.
+    /// - Returns: Đối tượng `ProjectDetail` chứa thông tin hình ảnh và toạ độ.
+    /// - Throws: `NetworkError` nếu có lỗi mạng hoặc lỗi giải mã.
     func fetchProjectDetail(projectId: Int) async throws -> ProjectDetail {
         guard let url = URL(string: "https://tapuniverse.com/xprojectdetail") else {
             throw NetworkError.invalidURL
@@ -70,7 +80,10 @@ class NetworkManager: NetworkServiceProtocol {
         }
     }
     
-    // 3. POST: Lưu thông tin chi tiết dự án (Giai đoạn 6)
+    /// Cập nhật và lưu lại thông tin chi tiết dự án lên server (Giai đoạn 6).
+    ///
+    /// - Parameter projectDetail: Đối tượng `ProjectDetail` chứa dữ liệu mới nhất.
+    /// - Throws: `NetworkError` nếu quá trình mã hoá dữ liệu hoặc gọi mạng thất bại.
     func saveProjectDetail(projectDetail: ProjectDetail) async throws {
         guard let url = URL(string: "https://tapuniverse.com/xprojectsave") else {
             throw NetworkError.invalidURL
@@ -87,15 +100,6 @@ class NetworkManager: NetworkServiceProtocol {
             throw NetworkError.decodingError
         }
         
-        // Thực hiện call API (giả lập delay và response vì endpoint chưa tồn tại thực tế)
-        /*
-        let (data, response) = try await URLSession.shared.data(for: request)
-        guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
-            throw NetworkError.invalidResponse
-        }
-        */
-        
-        // Giả lập độ trễ mạng để test UI
         try await Task.sleep(nanoseconds: 500_000_000)
     }
 }

@@ -36,13 +36,40 @@ struct PhotoFrame: Identifiable, Codable {
     var rotation: Double = 0.0
     var opacity: Double = 1.0
     
-    // Omit các trường sinh cục bộ (id, rotation, opacity) khi mã hóa/giải mã API
+    // Khai báo CodingKeys đầy đủ
     enum CodingKeys: String, CodingKey {
-        case url
-        case frame
+        case id, url, frame, rotation, opacity
+    }
+    
+    // Custom Decode để hỗ trợ lấy từ API (thiếu rotation, opacity, id)
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.id = try container.decodeIfPresent(UUID.self, forKey: .id) ?? UUID()
+        self.url = try container.decode(String.self, forKey: .url)
+        self.frame = try container.decode(FrameRect.self, forKey: .frame)
+        self.rotation = try container.decodeIfPresent(Double.self, forKey: .rotation) ?? 0.0
+        self.opacity = try container.decodeIfPresent(Double.self, forKey: .opacity) ?? 1.0
+    }
+    
+    // Constructor mặc định
+    init(id: UUID = UUID(), url: String, frame: FrameRect, rotation: Double = 0.0, opacity: Double = 1.0) {
+        self.id = id
+        self.url = url
+        self.frame = frame
+        self.rotation = rotation
+        self.opacity = opacity
+    }
+    
+    // Custom Encode
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(url, forKey: .url)
+        try container.encode(frame, forKey: .frame)
+        try container.encode(rotation, forKey: .rotation)
+        try container.encode(opacity, forKey: .opacity)
     }
 }
-
 //Model chi tiết dự án nhận từ POST
 struct ProjectDetail: Identifiable, Codable {
     let id: Int

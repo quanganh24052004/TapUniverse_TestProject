@@ -11,9 +11,11 @@ final class ProjectDetailViewModelTests: XCTestCase {
     
     var viewModel: ProjectDetailViewModel!
     var mockNetworkManager: MockNetworkManager!
+    let testLocalKey = "saved_project_detail_99"
     
     override func setUp() {
         super.setUp()
+        UserDefaults.standard.removeObject(forKey: testLocalKey)
         mockNetworkManager = MockNetworkManager()
         viewModel = ProjectDetailViewModel(projectId: 99, projectName: "Test Name", networkService: mockNetworkManager)
     }
@@ -21,6 +23,7 @@ final class ProjectDetailViewModelTests: XCTestCase {
     override func tearDown() {
         viewModel = nil
         mockNetworkManager = nil
+        UserDefaults.standard.removeObject(forKey: testLocalKey)
         super.tearDown()
     }
     
@@ -75,5 +78,23 @@ final class ProjectDetailViewModelTests: XCTestCase {
         XCTAssertNotNil(mockNetworkManager.lastSavedProjectDetail)
         XCTAssertEqual(mockNetworkManager.lastSavedProjectDetail?.id, 99)
         XCTAssertEqual(mockNetworkManager.lastSavedProjectDetail?.name, "Save Me")
+    }
+    
+    // MARK: - Test Local Storage
+    func test_LoadProjectDetail_FromLocalStorage() async {
+        // Arrange
+        let fakePhoto = PhotoFrame(id: UUID(), url: "local.jpg", frame: FrameRect(x: 0, y: 0, width: 50, height: 50))
+        let fakeDetail = ProjectDetail(id: 99, name: "Local Detail", photos: [fakePhoto])
+        let data = try? JSONEncoder().encode(fakeDetail)
+        UserDefaults.standard.set(data, forKey: testLocalKey)
+        
+        // Act
+        await viewModel.loadProjectDetail()
+        
+        // Assert
+        XCTAssertEqual(mockNetworkManager.fetchProjectDetailCalledCount, 0) // API was bypassed
+        XCTAssertNotNil(viewModel.selectedProjectDetail)
+        XCTAssertEqual(viewModel.selectedProjectDetail?.name, "Local Detail")
+        XCTAssertEqual(viewModel.saveStatus, "Đã tải từ máy")
     }
 }

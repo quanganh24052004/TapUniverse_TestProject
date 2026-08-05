@@ -13,7 +13,8 @@ class PhotoContainerView: UIView {
     var photoId: UUID
     weak var coordinator: InteractiveCanvasView.Coordinator?
     
-    var isInteracting = false // Cờ đánh dấu để chặn ghi đè từ SwiftUI khi người dùng đang kéo thả
+    var activeInteractionsCount = 0
+    var isInteracting: Bool { return activeInteractionsCount > 0 } // Cờ đánh dấu để chặn ghi đè từ SwiftUI khi người dùng đang thao tác
     
     let imageView = UIImageView()
     let deleteButton = UIButton(type: .system)
@@ -98,16 +99,29 @@ extension PhotoContainerView {
     
     // Gom các touch bên trong ảnh về PhotoContainerView (OOP Hit-Testing)
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
-        let hitView = super.hitTest(point, with: event)
-        
-        // Nếu chạm vào nút xóa hoặc điểm neo, để chúng tự xử lý
-        if hitView == deleteButton { return hitView }
-        for handle in cornerHandles {
-            if hitView == handle { return hitView }
+        // Nút xóa nằm ngoài bounds (y âm), nên super.hitTest sẽ trả về nil. 
+        // Do đó ta phải kiểm tra thủ công.
+        if !deleteButton.isHidden {
+            let pointInButton = convert(point, to: deleteButton)
+            if deleteButton.bounds.contains(pointInButton) {
+                return deleteButton
+            }
         }
         
-        // Còn lại, mọi vùng chạm bên trong bounds sẽ báo cáo là PhotoContainerView
-        if hitView != nil { return self }
+        // Điểm neo (handles) có 50% diện tích nằm ngoài bounds, cũng cần kiểm tra thủ công.
+        for handle in cornerHandles {
+            if !handle.isHidden {
+                let pointInHandle = convert(point, to: handle)
+                if handle.bounds.contains(pointInHandle) {
+                    return handle
+                }
+            }
+        }
+        
+        // Nếu chạm vào vùng ảnh (bên trong bounds), trả về chính nó để nhận gesture
+        if bounds.contains(point) {
+            return self
+        }
         
         return nil
     }
@@ -136,6 +150,8 @@ extension PhotoContainerView {
 
 // MARK: - 3. Update Data (SwiftUI Sync)
 extension PhotoContainerView {
+    
+    // SwiftUI -> UIKit
     func update(with photo: PhotoFrame, isSelected: Bool) {
         bounds = CGRect(x: 0, y: 0, width: photo.frame.width, height: photo.frame.height)
         center = CGPoint(x: photo.frame.x + photo.frame.width/2, y: photo.frame.y + photo.frame.height/2)
@@ -150,6 +166,7 @@ extension PhotoContainerView {
         }
     }
     
+    // Nghịch đảo thu phóng để các UI của ảnh không bị thay đổi
     func updateCanvasZoomScale(_ scale: CGFloat) {
         currentCanvasZoomScale = scale
         let inverseScale = 1.0 / scale
@@ -163,6 +180,7 @@ extension PhotoContainerView {
         updateSubviewsFrames(isSelected: !deleteButton.isHidden)
     }
     
+    // UIKit -> SwiftUI
     func saveCurrentState() {
         let currentWidth = bounds.width
         let currentHeight = bounds.height
@@ -208,15 +226,17 @@ extension PhotoContainerView: UIGestureRecognizerDelegate {
         guard let superview = superview else { return }
         switch gesture.state {
         case .began:
-            isInteracting = true
+            activeInteractionsCount += 1
             coordinator?.selectPhoto(id: photoId)
         case .changed:
             let translation = gesture.translation(in: superview)
             center = CGPoint(x: center.x + translation.x, y: center.y + translation.y)
             gesture.setTranslation(.zero, in: superview)
-        case .ended, .cancelled:
-            isInteracting = false
-            saveCurrentState()
+        case .ended, .cancelled, .failed:
+            activeInteractionsCount = max(0, activeInteractionsCount - 1)
+            if !isInteracting {
+                saveCurrentState()
+            }
         default: break
         }
     }
@@ -224,7 +244,7 @@ extension PhotoContainerView: UIGestureRecognizerDelegate {
     @objc func handlePinch(_ gesture: UIPinchGestureRecognizer) {
         switch gesture.state {
         case .began:
-            isInteracting = true
+            activeInteractionsCount += 1
             coordinator?.selectPhoto(id: photoId)
         case .changed:
             let scale = gesture.scale
@@ -249,9 +269,11 @@ extension PhotoContainerView: UIGestureRecognizerDelegate {
             
             center = CGPoint(x: center.x + rotatedShiftX, y: center.y + rotatedShiftY)
             gesture.scale = 1.0
-        case .ended, .cancelled:
-            isInteracting = false
-            saveCurrentState()
+        case .ended, .cancelled, .failed:
+            activeInteractionsCount = max(0, activeInteractionsCount - 1)
+            if !isInteracting {
+                saveCurrentState()
+            }
         default: break
         }
     }
@@ -259,14 +281,16 @@ extension PhotoContainerView: UIGestureRecognizerDelegate {
     @objc func handleRotation(_ gesture: UIRotationGestureRecognizer) {
         switch gesture.state {
         case .began:
-            isInteracting = true
+            activeInteractionsCount += 1
             coordinator?.selectPhoto(id: photoId)
         case .changed:
             transform = transform.rotated(by: gesture.rotation)
             gesture.rotation = 0
-        case .ended, .cancelled:
-            isInteracting = false
-            saveCurrentState()
+        case .ended, .cancelled, .failed:
+            activeInteractionsCount = max(0, activeInteractionsCount - 1)
+            if !isInteracting {
+                saveCurrentState()
+            }
         default: break
         }
     }
@@ -276,7 +300,7 @@ extension PhotoContainerView: UIGestureRecognizerDelegate {
         
         switch gesture.state {
         case .began:
-            isInteracting = true
+            activeInteractionsCount += 1
             initialBounds = bounds
             initialCenter = center
             initialTransform = transform
@@ -328,9 +352,11 @@ extension PhotoContainerView: UIGestureRecognizerDelegate {
             
             center = CGPoint(x: anchorPointInSuper.x - rotatedOffsetX, y: anchorPointInSuper.y - rotatedOffsetY)
             
-        case .ended, .cancelled:
-            isInteracting = false
-            saveCurrentState()
+        case .ended, .cancelled, .failed:
+            activeInteractionsCount = max(0, activeInteractionsCount - 1)
+            if !isInteracting {
+                saveCurrentState()
+            }
             
         default: break
         }

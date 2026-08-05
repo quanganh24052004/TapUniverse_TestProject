@@ -38,8 +38,16 @@ struct ProjectDetailView: View {
                 
                 Spacer()
                 
-                Text(viewModel.selectedProjectDetail?.name ?? "Chi tiết dự án")
-                    .font(.headline)
+                VStack(spacing: 2) {
+                    Text(viewModel.selectedProjectDetail?.name ?? "Chi tiết dự án")
+                        .font(.headline)
+                    
+                    if !viewModel.saveStatus.isEmpty {
+                        Text(viewModel.saveStatus)
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                }
                 
                 Spacer()
                 

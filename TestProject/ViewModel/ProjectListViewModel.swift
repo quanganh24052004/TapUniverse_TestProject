@@ -19,13 +19,13 @@ class ProjectListViewModel: ObservableObject {
     // Dependency Injection cho Network
     private let networkService: NetworkServiceProtocol
     
-    init(networkService: NetworkServiceProtocol = NetworkManager.shared) {
-        self.networkService = networkService
+    init(networkService: NetworkServiceProtocol? = nil) {
+        self.networkService = networkService ?? NetworkManager.shared
         // Khởi tạo và tự động tải danh sách đã lưu cục bộ lên trước để UI hiển thị tức thì
         loadProjectsFromLocalStorage()
     }
     
-    // Gọi API lấy danh sách dự án cho Screen 1
+    /// Tải danh sách dự án từ API cho Screen 1, đồng thời kết hợp với dữ liệu đã lưu cục bộ.
     func loadProjects() async {
         isLoading = true
         errorMessage = nil
@@ -55,7 +55,9 @@ class ProjectListViewModel: ObservableObject {
         isLoading = false
     }
     
-    // Tạo dự án mới cục bộ
+    /// Tạo và lưu trữ một dự án mới cục bộ.
+    ///
+    /// - Parameter name: Tên của dự án mới cần tạo.
     func addProject(name: String) {
         let newId = (projects.map { $0.id }.max() ?? 0) + 1
         let newProject = Project(id: newId, name: name)
@@ -65,7 +67,9 @@ class ProjectListViewModel: ObservableObject {
         saveProjectsToLocalStorage(self.projects)
     }
     
-    // Xóa dự án cục bộ
+    /// Xoá dự án cục bộ tại các vị trí được chỉ định.
+    ///
+    /// - Parameter offsets: Tập hợp các vị trí (index) của dự án cần xoá.
     func removeProject(at offsets: IndexSet) {
         projects.remove(atOffsets: offsets)
         
@@ -75,7 +79,9 @@ class ProjectListViewModel: ObservableObject {
     
     // MARK: - Helper Methods (Xử lý UserDefaults & Codable)
     
-    // Ghi dữ liệu xuống vĩnh viễn thiết bị
+    /// Ghi danh sách dự án xuống bộ nhớ lưu trữ vĩnh viễn (UserDefaults).
+    ///
+    /// - Parameter projectsList: Danh sách các dự án cần lưu.
     private func saveProjectsToLocalStorage(_ projectsList: [Project]) {
         do {
             let encoder = JSONEncoder()
@@ -87,12 +93,14 @@ class ProjectListViewModel: ObservableObject {
         }
     }
     
-    // Tải dữ liệu từ thiết bị lên bộ nhớ đệm ứng dụng
+    /// Cập nhật trạng thái ứng dụng bằng cách tải dữ liệu từ bộ nhớ cục bộ.
     private func loadProjectsFromLocalStorage() {
         self.projects = getLocalProjectsFromStorage()
     }
     
-    // Đọc và giải mã JSON từ UserDefaults
+    /// Đọc và giải mã dữ liệu JSON từ UserDefaults thành mảng Project.
+    ///
+    /// - Returns: Mảng chứa các đối tượng `Project` đã lưu, hoặc mảng rỗng nếu chưa có/lỗi.
     private func getLocalProjectsFromStorage() -> [Project] {
         guard let data = UserDefaults.standard.data(forKey: localProjectsKey) else {
             return []

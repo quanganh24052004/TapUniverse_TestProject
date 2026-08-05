@@ -70,8 +70,6 @@ final class ProjectListViewModelTests: XCTestCase {
         XCTAssertNotNil(viewModel.errorMessage) // Có thông báo lỗi mạng
     }
     
-}
-    
     // MARK: - 4. Test Quản lý Dự án (Thêm / Xóa)
     func test_AddProject_UpdatesListAndLocalStorage() {
         // Arrange

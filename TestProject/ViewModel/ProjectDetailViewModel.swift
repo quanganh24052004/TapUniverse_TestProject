@@ -12,48 +12,112 @@ class ProjectDetailViewModel: ObservableObject {
     @Published var selectedProjectDetail: ProjectDetail? = nil
     @Published var isLoading: Bool = false
     @Published var errorMessage: String? = nil
+    @Published var saveStatus: String = ""
+    
+    private var cancellables = Set<AnyCancellable>()
+    private var isFirstLoad = true // Tránh auto-save ngay khi vừa load dữ liệu xong
     
     let projectId: Int
     let projectName: String
     private let networkService: NetworkServiceProtocol
     
-    init(projectId: Int, projectName: String, networkService: NetworkServiceProtocol = NetworkManager.shared) {
+    init(projectId: Int, projectName: String, networkService: NetworkServiceProtocol? = nil) {
         self.projectId = projectId
         self.projectName = projectName
-        self.networkService = networkService
+        self.networkService = networkService ?? NetworkManager.shared
+        
+        setupAutoSave()
     }
     
-    // Gọi API lấy thông tin chi tiết Canvas cho Screen 2
+    private func setupAutoSave() {
+        $selectedProjectDetail
+            .dropFirst() // Bỏ qua lần khởi tạo ban đầu (nil)
+            .debounce(for: .seconds(1.0), scheduler: RunLoop.main)
+            .sink { [weak self] updatedDetail in
+                guard let self = self, let detail = updatedDetail else { return }
+                // Bỏ qua lần gán đầu tiên từ loadProjectDetail()
+                if self.isFirstLoad {
+                    self.isFirstLoad = false
+                    return
+                }
+                self.saveProjectToLocalStorage(detail)
+            }
+            .store(in: &cancellables)
+    }
+    
+    /// Lấy thông tin chi tiết cấu hình Canvas (phục vụ hiển thị Screen 2).
     func loadProjectDetail() async {
         isLoading = true
         errorMessage = nil
+        
+        // 1. Ưu tiên load từ Local Storage trước
+        if let localDetail = loadProjectFromLocalStorage() {
+            self.selectedProjectDetail = localDetail
+            self.saveStatus = "Đã tải từ máy"
+            self.isLoading = false
+            return
+        }
+        
+        // 2. Nếu không có local, thử gọi API
         do {
             self.selectedProjectDetail = try await networkService.fetchProjectDetail(projectId: projectId)
+            self.saveStatus = "Đã tải từ máy chủ"
         } catch {
-            // Sửa lỗi chức năng Thêm dự án mới:
-            // Do dự án mới tạo cục bộ chưa tồn tại trên server, API sẽ trả về lỗi (404/decode error).
-            // Ta sẽ tạo một ProjectDetail rỗng làm fallback để người dùng bắt đầu vẽ Canvas.
+            // Xử lý ngoại lệ khi vừa tạo dự án mới (chưa có trên server)
             self.selectedProjectDetail = ProjectDetail(id: projectId, name: projectName, photos: [])
-            print("Đã tạo fallback Canvas trống cho dự án mới: \(projectName)")
+            self.saveStatus = "Đã khởi tạo"
         }
         isLoading = false
     }
     
-    // Gọi API lưu thông tin dự án khi đóng (Giai đoạn 6)
+    /// Đồng bộ hoá (lưu) thông tin dự án hiện tại lên Server (Giai đoạn 6).
     func saveProject() async {
         guard let projectDetail = selectedProjectDetail else { return }
         isLoading = true
+        saveStatus = "Đang đồng bộ..."
         do {
             try await networkService.saveProjectDetail(projectDetail: projectDetail)
-            print("Đã lưu dự án thành công: \(projectDetail.name)")
+            saveStatus = "Đã đồng bộ máy chủ"
         } catch {
             self.errorMessage = "Lỗi khi lưu dự án."
-            print("Save Error: \(error)")
+            saveStatus = "Đồng bộ thất bại"
         }
         isLoading = false
     }
     
-    // Thêm các ảnh từ thư viện vào chính giữa Canvas
+    // MARK: - Local Storage
+    
+    private func saveProjectToLocalStorage(_ detail: ProjectDetail) {
+        self.saveStatus = "Đang lưu..."
+        do {
+            let data = try JSONEncoder().encode(detail)
+            UserDefaults.standard.set(data, forKey: "saved_project_detail_\(projectId)")
+            let formatter = DateFormatter()
+            formatter.dateFormat = "HH:mm:ss"
+            self.saveStatus = "Đã lưu cục bộ lúc \(formatter.string(from: Date()))"
+        } catch {
+            self.saveStatus = "Lưu cục bộ thất bại"
+            print("Lỗi lưu local storage: \(error)")
+        }
+    }
+    
+    private func loadProjectFromLocalStorage() -> ProjectDetail? {
+        guard let data = UserDefaults.standard.data(forKey: "saved_project_detail_\(projectId)") else {
+            return nil
+        }
+        do {
+            return try JSONDecoder().decode(ProjectDetail.self, from: data)
+        } catch {
+            print("Lỗi tải local storage: \(error)")
+            return nil
+        }
+    }
+    
+    /// Thêm một hoặc nhiều ảnh mới từ URL vào chính giữa không gian Canvas.
+    ///
+    /// - Parameters:
+    ///   - urls: Mảng chứa các đường dẫn (URL) của hình ảnh cần chèn.
+    ///   - selectedPhotoId: Trạng thái `inout` để trỏ vào ảnh cuối cùng được thêm vào.
     func addPhotos(urls: [String], into selectedPhotoId: inout UUID?) {
         for url in urls {
             let newPhoto = PhotoFrame(
@@ -67,7 +131,10 @@ class ProjectDetailViewModel: ObservableObject {
         }
     }
     
-    // Kết xuất Canvas thành ảnh JPEG
+    /// Kết xuất toàn bộ cấu trúc Canvas hiện tại thành một bức ảnh thực tế (JPEG).
+    /// Quá trình này được đẩy sang Background Queue để không làm chặn (block) giao diện người dùng.
+    ///
+    /// - Parameter completion: Hàm callback trả về `UIImage` hoàn chỉnh, hoặc `nil` nếu rỗng/lỗi.
     func exportCanvas(completion: @escaping (UIImage?) -> Void) {
         guard let photos = selectedProjectDetail?.photos, !photos.isEmpty else {
             completion(nil)
