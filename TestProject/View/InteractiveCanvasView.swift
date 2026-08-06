@@ -31,16 +31,18 @@ struct InteractiveCanvasView: UIViewRepresentable {
         scrollView.showsVerticalScrollIndicator = false
         scrollView.backgroundColor = .clear
         
-        let zoomContainerView = PassThroughView(frame: CGRect(x: 0, y: 0, width: 1000, height: 1000))
+        let defaultRect = CGRect(origin: .zero, size: AppConstants.Canvas.defaultSize)
+        
+        let zoomContainerView = PassThroughView(frame: defaultRect)
         zoomContainerView.backgroundColor = .clear
         scrollView.addSubview(zoomContainerView)
         
-        let containerView = UIView(frame: CGRect(x: 0, y: 0, width: 1000, height: 1000))
+        let containerView = UIView(frame: defaultRect)
         containerView.backgroundColor = .canvas
         containerView.clipsToBounds = true
         zoomContainerView.addSubview(containerView)
         
-        let uiContainerView = PassThroughView(frame: CGRect(x: 0, y: 0, width: 1000, height: 1000))
+        let uiContainerView = PassThroughView(frame: defaultRect)
         uiContainerView.backgroundColor = .clear
         uiContainerView.clipsToBounds = false
         zoomContainerView.addSubview(uiContainerView)

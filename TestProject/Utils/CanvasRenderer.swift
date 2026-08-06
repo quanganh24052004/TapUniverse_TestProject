@@ -12,59 +12,27 @@ class CanvasRenderer {
     
     /// Hàm kết xuất toàn bộ Canvas thành dữ liệu hình ảnh JPEG
     static func renderToJPEG(photos: [PhotoFrame], canvasSize: CGSize) -> Data? {
-        var minX: CGFloat = .greatestFiniteMagnitude
-        var minY: CGFloat = .greatestFiniteMagnitude
-        var maxX: CGFloat = -.greatestFiniteMagnitude
-        var maxY: CGFloat = -.greatestFiniteMagnitude
+        // 1. Ép cứng kích thước Canvas chuẩn theo AppConstants
+        let targetSize = AppConstants.Canvas.defaultSize
         
-        for photo in photos {
-            let rect = CGRect(x: photo.frame.x, y: photo.frame.y, width: photo.frame.width, height: photo.frame.height)
-            let center = CGPoint(x: rect.midX, y: rect.midY)
-            let transform = CGAffineTransform(translationX: center.x, y: center.y)
-                .rotated(by: CGFloat(Angle(degrees: photo.rotation).radians))
-                .translatedBy(x: -center.x, y: -center.y)
-            
-            let corners = [
-                CGPoint(x: rect.minX, y: rect.minY).applying(transform),
-                CGPoint(x: rect.maxX, y: rect.minY).applying(transform),
-                CGPoint(x: rect.minX, y: rect.maxY).applying(transform),
-                CGPoint(x: rect.maxX, y: rect.maxY).applying(transform)
-            ]
-            
-            for point in corners {
-                minX = min(minX, point.x)
-                minY = min(minY, point.y)
-                maxX = max(maxX, point.x)
-                maxY = max(maxY, point.y)
-            }
-        }
+        // 2. Cấu hình định dạng không bị ảnh hưởng bởi tỷ lệ scale của thiết bị (1 point = 1 pixel)
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1.0
+        format.opaque = true
         
-        guard minX <= maxX && minY <= maxY else { return nil }
-        
-        let margin: CGFloat = 40
-        let cropRect = CGRect(
-            x: minX - margin,
-            y: minY - margin,
-            width: (maxX - minX) + margin * 2,
-            height: (maxY - minY) + margin * 2
-        )
-        
-        let renderer = UIGraphicsImageRenderer(size: cropRect.size)
+        let renderer = UIGraphicsImageRenderer(size: targetSize, format: format)
         
         // Tạo UIImage từ bộ dựng đồ họa
         let renderedImage = renderer.image { context in
             let cgContext = context.cgContext
             
-            // Dịch hệ trục toạ độ để crop ảnh vừa khít
-            cgContext.translateBy(x: -cropRect.minX, y: -cropRect.minY)
-            
-            // Đổ màu nền cho vùng canvas được xuất ra đồng bộ với nền của app
+            // Đổ màu nền cho vùng canvas
             if let canvasColor = UIColor.canvas.cgColor as CGColor? {
                 cgContext.setFillColor(canvasColor)
             } else {
                 cgContext.setFillColor(UIColor.white.cgColor)
             }
-            cgContext.fill(cropRect)
+            cgContext.fill(CGRect(origin: .zero, size: targetSize))
             
             for photo in photos {
                 // 1. Lấy ảnh từ Cache để tăng tốc, nếu không có mới tải đồng bộ
