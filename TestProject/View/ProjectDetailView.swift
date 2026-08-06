@@ -11,15 +11,6 @@ struct ProjectDetailView: View {
     @StateObject var viewModel: ProjectDetailViewModel
     @Environment(\.dismiss) var dismiss
     
-    @State private var selectedPhotoId: UUID? = nil
-    // Đã thay thế canvasScale bằng UIScrollView trong InteractiveCanvasView
-    @State private var isShowingPhotoPicker = false
-    
-    // Trạng thái quản lý chia sẻ ảnh
-    @State private var isExporting = false
-    @State private var exportItem: UIImage? = nil
-    @State private var isShowingShareSheet = false
-    
     var body: some View {
         VStack(spacing: 0) {
             
@@ -53,9 +44,9 @@ struct ProjectDetailView: View {
                 
                 // NÚT XUẤT BẢN CANVASES (SCREEN 3)
                 Button(action: {
-                    exportCanvas()
+                    viewModel.triggerExportCanvas()
                 }) {
-                    if isExporting {
+                    if viewModel.isExporting {
                         ProgressView()
                             .scaleEffect(0.8)
                     } else {
@@ -78,10 +69,26 @@ struct ProjectDetailView: View {
                     
                     if viewModel.isLoading {
                         ProgressView("Đang tải dữ liệu Canvas...")
-                    } else if let photosBinding = Binding($viewModel.selectedProjectDetail)?.photos {
+                    } else if let projectDetail = viewModel.selectedProjectDetail {
                         InteractiveCanvasView(
-                            photos: photosBinding,
-                            selectedPhotoId: $selectedPhotoId
+                            photos: projectDetail.photos,
+                            selectedPhotoId: viewModel.selectedPhotoId,
+                            onUpdatePhotoFrame: { id, newFrame, newRotation in
+                                if var photo = viewModel.selectedProjectDetail?.photos.first(where: { $0.id == id }) {
+                                    photo.frame = newFrame
+                                    photo.rotation = newRotation
+                                    viewModel.updatePhoto(photo)
+                                }
+                            },
+                            onSelectPhoto: { id in
+                                viewModel.bringPhotoToFront(id: id)
+                            },
+                            onDeletePhoto: { id in
+                                viewModel.deletePhoto(id: id)
+                            },
+                            onBackgroundTap: {
+                                viewModel.selectedPhotoId = nil
+                            }
                         )
                     }
                 }
@@ -96,7 +103,7 @@ struct ProjectDetailView: View {
             }
             
             // Custom Slider tinh chỉnh Opacity (Chỉ hiển thị khi có ảnh được chọn)
-            if let selectedId = selectedPhotoId,
+            if let selectedId = viewModel.selectedPhotoId,
                let selectedIndex = viewModel.selectedProjectDetail?.photos.firstIndex(where: { $0.id == selectedId }) {
                 
                 CustomOpacitySlider(opacity: Binding(
@@ -104,12 +111,12 @@ struct ProjectDetailView: View {
                     set: { viewModel.selectedProjectDetail?.photos[selectedIndex].opacity = $0 }
                 ))
                 .transition(.move(edge: .bottom).combined(with: .opacity))
-                .animation(.easeInOut, value: selectedPhotoId)
+                .animation(.easeInOut, value: viewModel.selectedPhotoId)
             }
             
             // Nút "Add Photo" mở Photo Picker
             Button(action: {
-                isShowingPhotoPicker = true
+                viewModel.isShowingPhotoPicker = true
             }) {
                 Text("Add Photo")
                     .font(.system(.body, design: .rounded))
@@ -124,27 +131,15 @@ struct ProjectDetailView: View {
             .padding(.vertical, 16)
         }
         .navigationBarBackButtonHidden(true)
-        .sheet(isPresented: $isShowingPhotoPicker) {
+        .sheet(isPresented: $viewModel.isShowingPhotoPicker) {
             CustomPhotoPicker { selectedUrls in
-                viewModel.addPhotos(urls: selectedUrls, into: &$selectedPhotoId.wrappedValue)
+                viewModel.addPhotos(urls: selectedUrls, into: &viewModel.selectedPhotoId)
             }
         }
         // HIỂN THỊ TRÌNH CHIA SẺ HỆ THỐNG KHI ĐÃ RENDER XONG JPEG
-        .sheet(isPresented: $isShowingShareSheet, onDismiss: { exportItem = nil }) {
-            if let imageToShare = exportItem {
+        .sheet(isPresented: $viewModel.isShowingShareSheet, onDismiss: { viewModel.exportItem = nil }) {
+            if let imageToShare = viewModel.exportItem {
                 ActivityView(activityItems: [imageToShare])
-            }
-        }
-    }
-    
-    // GỌI KẾT XUẤT ĐỒ HỌA SANG JPEG & CHIA SẺ
-    private func exportCanvas() {
-        isExporting = true
-        viewModel.exportCanvas { image in
-            self.exportItem = image
-            self.isExporting = false
-            if image != nil {
-                self.isShowingShareSheet = true
             }
         }
     }

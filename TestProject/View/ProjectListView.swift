@@ -13,7 +13,11 @@ struct ProjectListView: View {
     
     var body: some View {
         NavigationStack {
-            VStack(spacing: 0) {
+            ZStack {
+                Color(.white)
+                    .ignoresSafeArea()
+                
+                VStack(spacing: 0) {
                 
                 if viewModel.isLoading && viewModel.projects.isEmpty {
                     Spacer()
@@ -48,15 +52,36 @@ struct ProjectListView: View {
                 } else {
                     List {
                         ForEach(viewModel.projects) { project in
-                            NavigationLink(destination: ProjectDetailView(viewModel: ProjectDetailViewModel(projectId: project.id, projectName: project.name))) {
+                            ZStack {
+                                NavigationLink(value: project) {
+                                    EmptyView()
+                                }
+                                .opacity(0)
+                                 
                                 ProjectRow(project: project)
+                                    .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: 2)
+                            }
+                            .listRowBackground(Color.clear)
+                            .listRowSeparator(.hidden)
+                            .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
+                            
+                            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                                
+                                Button(role: .destructive) {
+                                    if let index = viewModel.projects.firstIndex(where: { $0.id == project.id }) {
+                                        viewModel.removeProject(at: IndexSet(integer: index))
+                                    }
+                                } label: {
+                                    Image(systemName: "minus.circle.fill")
+                                        .fontWeight(.bold)
+                                        .foregroundColor(.white)
+                                }
                             }
                         }
-                        .onDelete { indexSet in
-                            viewModel.removeProject(at: indexSet)
-                        }
                     }
-                    .listStyle(.automatic)
+                    .listStyle(.plain)
+                    .background(Color(.clear))
+                    .scrollContentBackground(.hidden)
                 }
                 
                 Button(action: {
@@ -65,7 +90,7 @@ struct ProjectListView: View {
                     Text("Add Project")
                         .font(.system(.body, design: .rounded))
                         .bold()
-                        .foregroundColor(.white)
+                        .foregroundColor(.bgButton)
                         .padding()
                         .frame(maxWidth: .infinity)
                         .background(Color.universe)
@@ -80,6 +105,10 @@ struct ProjectListView: View {
             }
             .sheet(isPresented: $isShowingAddSheet) {
                 AddProjectView(viewModel: viewModel)
+            }
+            .navigationDestination(for: Project.self) { project in
+                ProjectDetailView(viewModel: ProjectDetailViewModel(projectId: project.id, projectName: project.name))
+            }
             }
         }
     }

@@ -32,6 +32,19 @@ class PhotoContainerView: UIView {
     var initialBounds = CGRect.zero
     var initialTransform = CGAffineTransform.identity
     
+    // Đồng bộ hoá toạ độ và kích thước sang imageView (vì imageView nằm ở một layer Canvas khác)
+    override var center: CGPoint {
+        didSet { imageView.center = center }
+    }
+    
+    override var bounds: CGRect {
+        didSet { imageView.bounds = bounds }
+    }
+    
+    override var transform: CGAffineTransform {
+        didSet { imageView.transform = transform }
+    }
+    
     // Lưu trạng thái tính toán thu phóng
     var anchorPointInSuper = CGPoint.zero
     var initialDistanceInSuper: CGFloat = 0
@@ -57,14 +70,16 @@ class PhotoContainerView: UIView {
         imageView.contentMode = .scaleAspectFill
         imageView.clipsToBounds = true
         self.layer.borderColor = UIColor.systemBlue.cgColor
-        addSubview(imageView)
+        // KHÔNG CÒN addSubview(imageView) ở đây nữa. 
+        // imageView sẽ được add vào containerView (Canvas chính) từ Coordinator.
         
-        let config = UIImage.SymbolConfiguration(pointSize: 24)
-        let minusImage = UIImage(systemName: "xmark.circle.fill", withConfiguration: config)
+        let config = UIImage.SymbolConfiguration(paletteColors: [.white, .systemRed])
+        let sizeConfig = UIImage.SymbolConfiguration(pointSize: 24)
+        let finalConfig = config.applying(sizeConfig)
+        let minusImage = UIImage(systemName: "minus.circle.fill", withConfiguration: finalConfig)
         deleteButton.setImage(minusImage, for: .normal)
-        deleteButton.tintColor = .systemRed
-        deleteButton.layer.cornerRadius = 12
-        deleteButton.clipsToBounds = true
+        deleteButton.tintColor = .systemRed 
+
         deleteButton.addTarget(self, action: #selector(handleDelete), for: .touchUpInside)
         addSubview(deleteButton)
         
@@ -93,14 +108,28 @@ class PhotoContainerView: UIView {
         }
         
         guard let imageURL = URL(string: url) else { return }
-        URLSession.shared.dataTask(with: imageURL) { [weak self] data, _, _ in
-            if let data = data, let image = UIImage(data: data) {
-                ImageCacheManager.shared.saveImage(image, forKey: url)
-                DispatchQueue.main.async {
-                    self?.imageView.image = image
+        
+        if imageURL.isFileURL {
+            // Tải ảnh từ thư mục nội bộ (Local Document)
+            DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+                if let data = try? Data(contentsOf: imageURL), let image = UIImage(data: data) {
+                    ImageCacheManager.shared.saveImage(image, forKey: url)
+                    DispatchQueue.main.async {
+                        self?.imageView.image = image
+                    }
                 }
             }
-        }.resume()
+        } else {
+            // Tải ảnh từ mạng (như Picsum)
+            URLSession.shared.dataTask(with: imageURL) { [weak self] data, _, _ in
+                if let data = data, let image = UIImage(data: data) {
+                    ImageCacheManager.shared.saveImage(image, forKey: url)
+                    DispatchQueue.main.async {
+                        self?.imageView.image = image
+                    }
+                }
+            }.resume()
+        }
     }
     
     @objc private func handleDelete() {
@@ -141,7 +170,6 @@ extension PhotoContainerView {
     }
     
     func updateSubviewsFrames(isSelected: Bool) {
-        imageView.frame = bounds
         let inverseScale = 1.0 / currentCanvasZoomScale
         self.layer.borderWidth = isSelected ? (2.0 * inverseScale) : 0
         
@@ -313,7 +341,29 @@ extension PhotoContainerView: UIGestureRecognizerDelegate {
             activeInteractionsCount += 1
             coordinator?.selectPhoto(id: photoId)
         case .changed:
-            transform = transform.rotated(by: gesture.rotation)
+            let anchorInLocal = gesture.location(in: self)
+            let offset = CGPoint(x: anchorInLocal.x - bounds.midX, y: anchorInLocal.y - bounds.midY)
+            
+            // Tính toán vector offset trên hệ tọa độ cha trước khi xoay
+            let v_super_old = CGPoint(
+                x: offset.x * transform.a + offset.y * transform.c,
+                y: offset.x * transform.b + offset.y * transform.d
+            )
+            
+            let newTransform = transform.rotated(by: gesture.rotation)
+            
+            // Tính toán vector offset trên hệ tọa độ cha sau khi xoay
+            let v_super_new = CGPoint(
+                x: offset.x * newTransform.a + offset.y * newTransform.c,
+                y: offset.x * newTransform.b + offset.y * newTransform.d
+            )
+            
+            // Dịch chuyển center để bù trừ, giúp anchorInLocal đứng im tại chỗ
+            center = CGPoint(
+                x: center.x + v_super_old.x - v_super_new.x,
+                y: center.y + v_super_old.y - v_super_new.y
+            )
+            transform = newTransform
             gesture.rotation = 0
         case .ended, .cancelled, .failed:
             activeInteractionsCount = max(0, activeInteractionsCount - 1)

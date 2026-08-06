@@ -8,7 +8,7 @@
 import Foundation
 
 // Model của Project
-struct Project: Identifiable, Codable, Equatable {
+struct Project: Identifiable, Codable, Equatable, Hashable {
     let id: Int
     let name: String
 }

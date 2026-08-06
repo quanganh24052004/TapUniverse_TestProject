@@ -6,137 +6,151 @@
 //
 
 import SwiftUI
-
-// Struct mô hình hóa ảnh trong thư viện
-struct PickerPhoto: Identifiable, Hashable {
-    let id = UUID()
-    let url: String
-    let album: String
-}
+import Photos
 
 struct CustomPhotoPicker: View {
     @Environment(\.dismiss) var dismiss
-    var onAddPhotos: ([String]) -> Void // Callback trả về danh sách các URL ảnh được chọn
+    var onAddPhotos: ([String]) -> Void
     
-    @State private var selectedAlbum: String = "Recent Photos"
-    @State private var selectedPhotoUrls: Set<String> = []
+    @StateObject private var libraryManager = PhotoLibraryManager()
     
-    let albums = ["Recent Photos", "Travel", "Portraits", "Favorites"]
+    @State private var selectedAssets: Set<PHAsset> = []
+    @State private var isExporting = false
     
-    // Giả lập cơ sở dữ liệu hình ảnh phong phú theo các Album
-    let mockPhotosDatabase: [PickerPhoto] = [
-        PickerPhoto(url: "https://picsum.photos/id/1015/400/300", album: "Recent Photos"),
-        PickerPhoto(url: "https://picsum.photos/id/1016/400/300", album: "Recent Photos"),
-        PickerPhoto(url: "https://picsum.photos/id/1018/400/300", album: "Recent Photos"),
-        PickerPhoto(url: "https://picsum.photos/id/1019/400/300", album: "Recent Photos"),
-        PickerPhoto(url: "https://picsum.photos/id/1020/400/300", album: "Recent Photos"),
-        PickerPhoto(url: "https://picsum.photos/id/1021/400/300", album: "Recent Photos"),
-        
-        PickerPhoto(url: "https://picsum.photos/id/1035/400/300", album: "Travel"),
-        PickerPhoto(url: "https://picsum.photos/id/1036/400/300", album: "Travel"),
-        PickerPhoto(url: "https://picsum.photos/id/1037/400/300", album: "Travel"),
-        
-        PickerPhoto(url: "https://picsum.photos/id/1043/400/300", album: "Portraits"),
-        PickerPhoto(url: "https://picsum.photos/id/1062/400/300", album: "Portraits"),
-        PickerPhoto(url: "https://picsum.photos/id/1074/400/300", album: "Portraits")
-    ]
-    
-    // Định nghĩa lưới 3 cột đều nhau với khoảng cách giữa các phần tử là 4pt
     let columns = [
         GridItem(.flexible(), spacing: 4),
         GridItem(.flexible(), spacing: 4),
         GridItem(.flexible(), spacing: 4)
     ]
     
-    var filteredPhotos: [PickerPhoto] {
-        mockPhotosDatabase.filter { $0.album == selectedAlbum }
-    }
-    
     var body: some View {
         NavigationStack {
-            VStack(spacing: 0) {
-                // Thanh chọn Album (Menu Dropdown)
-                HStack {
-                    Text("Album:")
-                        .font(.system(.subheadline, design: .rounded))
-                        .foregroundColor(.secondary)
+            VStack(spacing: 2) {
+                if libraryManager.isAuthorized {
                     
-                    Picker("Chọn Album", selection: $selectedAlbum) {
-                        ForEach(albums, id: \.self) { album in
-                            Text(album).tag(album)
-                        }
-                    }
-                    .pickerStyle(.menu)
-                    .tint(.blue)
-                    .bold()
-                    
-                    Spacer()
-                }
-                .padding()
-                .background(Color(.systemGroupedBackground))
-                
-                // Hiển thị ảnh dạng lưới 3 cột
-                ScrollView {
-                    LazyVGrid(columns: columns, spacing: 4) {
-                        ForEach(filteredPhotos) { photo in
-                            let isSelected = selectedPhotoUrls.contains(photo.url)
-                            
-                            ZStack(alignment: .bottomTrailing) {
-                                AsyncImage(url: URL(string: photo.url)) { image in
-                                    image
-                                        .resizable()
-                                        .aspectRatio(1, contentMode: .fill)
-                                } placeholder: {
-                                    Color.gray.opacity(0.2)
-                                        .aspectRatio(1, contentMode: .fill)
-                                }
-                                .frame(minWidth: 0, maxWidth: .infinity)
-                                .clipped()
-                                .onTapGesture {
-                                    toggleSelection(for: photo.url)
-                                }
-                                
-                                // Hiệu ứng tích chọn màu xanh dương
-                                if isSelected {
-                                    Color.black.opacity(0.3)
+                    ScrollView {
+                        LazyVGrid(columns: columns, spacing: 4) {
+                            if let assets = libraryManager.assets {
+                                ForEach(0..<assets.count, id: \.self) { index in
+                                    let asset = assets[index]
+                                    let isSelected = selectedAssets.contains(asset)
                                     
-                                    Image(systemName: "checkmark.circle.fill")
-                                        .foregroundColor(.blue)
-                                        .background(Circle().fill(Color.white))
-                                        .padding(8)
-                                        .font(.title3)
+                                    ZStack(alignment: .bottomTrailing) {
+                                        AssetThumbnailView(
+                                            asset: asset,
+                                            imageManager: libraryManager.imageManager,
+                                            targetSize: CGSize(width: 300, height: 300)
+                                        )
+                                        .frame(minWidth: 0, maxWidth: .infinity)
+                                        .clipped()
+                                        
+                                        // Hiệu ứng tích chọn màu xanh dương
+                                        if isSelected {
+                                            Rectangle()
+                                                .stroke(Color.blue, lineWidth: 2)
+                                        }
+                                    }
+                                    .contentShape(Rectangle())
+                                    .onTapGesture {
+                                        toggleSelection(for: asset)
+                                    }
                                 }
                             }
                         }
+                        .padding(.horizontal, 4)
                     }
-                    .padding(.horizontal, 4)
+                } else {
+                    VStack {
+                        Spacer()
+                        Text("Cần cấp quyền truy cập Ảnh")
+                            .font(.headline)
+                        Button("Cấp quyền") {
+                            libraryManager.requestAuthorization()
+                        }
+                        .padding()
+                        .buttonStyle(.borderedProminent)
+                        Spacer()
+                    }
                 }
             }
-            .navigationTitle(selectedAlbum)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel") {
+                    Button("Hủy") {
                         dismiss()
                     }
                 }
+                
+                ToolbarItem(placement: .principal) {
+                    Menu {
+                        Picker("Chọn Album", selection: $libraryManager.selectedAlbum) {
+                            ForEach(libraryManager.albums, id: \.localIdentifier) { album in
+                                Text(album.localizedTitle ?? "Unknown").tag(album as PHAssetCollection?)
+                            }
+                        }
+                    } label: {
+                        HStack(spacing: 4) {
+                            Text(libraryManager.selectedAlbum?.localizedTitle ?? "Đang tải...")
+                                .font(.headline)
+                                .foregroundColor(.primary)
+                            
+                            Image(systemName: "chevron.down.circle")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                }
+                
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Add") {
-                        onAddPhotos(Array(selectedPhotoUrls))
-                        dismiss()
+                    Button(action: {
+                        addSelectedPhotos()
+                    }) {
+                        if isExporting {
+                            ProgressView()
+                        } else {
+                            Text("Thêm (\(selectedAssets.count))")
+                                .bold()
+                        }
                     }
-                    .bold()
-                    .disabled(selectedPhotoUrls.isEmpty) // Chỉ bật nút Add khi có ảnh được chọn
+                    .disabled(selectedAssets.isEmpty || isExporting)
                 }
+            }
+            .onAppear {
+                libraryManager.requestAuthorization()
             }
         }
     }
     
-    private func toggleSelection(for url: String) {
-        if selectedPhotoUrls.contains(url) {
-            selectedPhotoUrls.remove(url)
+    private func toggleSelection(for asset: PHAsset) {
+        if selectedAssets.contains(asset) {
+            selectedAssets.remove(asset)
         } else {
-            selectedPhotoUrls.insert(url)
+            selectedAssets.insert(asset)
+        }
+    }
+    
+    private func addSelectedPhotos() {
+        guard !selectedAssets.isEmpty else { return }
+        isExporting = true
+        
+        let assetsToProcess = Array(selectedAssets)
+        var localUrls: [String] = []
+        
+        Task {
+            for asset in assetsToProcess {
+                do {
+                    let url = try await libraryManager.saveAssetToLocal(asset: asset)
+                    localUrls.append(url.absoluteString)
+                } catch {
+                    print("Lỗi xuất ảnh: \(error)")
+                }
+            }
+            
+            await MainActor.run {
+                isExporting = false
+                onAddPhotos(localUrls)
+                dismiss()
+            }
         }
     }
 }

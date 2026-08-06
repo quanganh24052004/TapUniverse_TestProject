@@ -58,8 +58,12 @@ class CanvasRenderer {
             // Dịch hệ trục toạ độ để crop ảnh vừa khít
             cgContext.translateBy(x: -cropRect.minX, y: -cropRect.minY)
             
-            // Đổ màu nền trắng cho vùng canvas được xuất ra
-            cgContext.setFillColor(UIColor.white.cgColor)
+            // Đổ màu nền cho vùng canvas được xuất ra đồng bộ với nền của app
+            if let canvasColor = UIColor.canvas.cgColor as CGColor? {
+                cgContext.setFillColor(canvasColor)
+            } else {
+                cgContext.setFillColor(UIColor.white.cgColor)
+            }
             cgContext.fill(cropRect)
             
             for photo in photos {

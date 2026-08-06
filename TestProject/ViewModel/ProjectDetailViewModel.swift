@@ -14,8 +14,15 @@ class ProjectDetailViewModel: ObservableObject {
     @Published var errorMessage: String? = nil
     @Published var saveStatus: String = ""
     
+    // UI States
+    @Published var selectedPhotoId: UUID? = nil
+    @Published var isShowingPhotoPicker = false
+    @Published var isExporting = false
+    @Published var isShowingShareSheet = false
+    @Published var exportItem: UIImage? = nil
+    
     private var cancellables = Set<AnyCancellable>()
-    private var isFirstLoad = true // Tránh auto-save ngay khi vừa load dữ liệu xong
+    private var isFirstLoad = true
     
     let projectId: Int
     let projectName: String
@@ -122,14 +129,68 @@ class ProjectDetailViewModel: ObservableObject {
     ///   - selectedPhotoId: Trạng thái `inout` để trỏ vào ảnh cuối cùng được thêm vào.
     func addPhotos(urls: [String], into selectedPhotoId: inout UUID?) {
         for url in urls {
+            var width: Double = 300
+            var height: Double = 300
+            
+            // Khôi phục tỷ lệ (aspect ratio) gốc của bức ảnh từ file local
+            if let imageURL = URL(string: url),
+               imageURL.isFileURL,
+               let image = UIImage(contentsOfFile: imageURL.path) {
+                
+                let imageAspect = image.size.width / image.size.height
+                if imageAspect > 1 {
+                    // Ảnh ngang
+                    width = 300
+                    height = 300 / imageAspect
+                } else {
+                    // Ảnh dọc hoặc vuông
+                    height = 300
+                    width = 300 * imageAspect
+                }
+            }
+            
             let newPhoto = PhotoFrame(
                 url: url,
-                frame: FrameRect(x: 425, y: 425, width: 150, height: 150), // Center of 1000x1000
+                frame: FrameRect(x: 500 - width/2, y: 500 - height/2, width: width, height: height), // Đặt ngay giữa Canvas 1000x1000
                 rotation: 0.0,
                 opacity: 1.0
             )
             selectedProjectDetail?.photos.append(newPhoto)
             selectedPhotoId = newPhoto.id
+        }
+    }
+    
+    // MARK: - Photo Operations (MVVM Logic)
+    
+    func deletePhoto(id: UUID) {
+        selectedProjectDetail?.photos.removeAll { $0.id == id }
+        if selectedPhotoId == id {
+            selectedPhotoId = nil
+        }
+    }
+    
+    func bringPhotoToFront(id: UUID) {
+        guard let index = selectedProjectDetail?.photos.firstIndex(where: { $0.id == id }) else { return }
+        let photo = selectedProjectDetail!.photos.remove(at: index)
+        selectedProjectDetail!.photos.append(photo)
+        selectedPhotoId = id
+    }
+    
+    func updatePhoto(_ updatedPhoto: PhotoFrame) {
+        guard let index = selectedProjectDetail?.photos.firstIndex(where: { $0.id == updatedPhoto.id }) else { return }
+        selectedProjectDetail?.photos[index] = updatedPhoto
+    }
+    
+    /// Bắt đầu quá trình kết xuất ảnh. Cập nhật các UI state tương ứng.
+    func triggerExportCanvas() {
+        isExporting = true
+        exportCanvas { [weak self] image in
+            guard let self = self else { return }
+            self.exportItem = image
+            self.isExporting = false
+            if image != nil {
+                self.isShowingShareSheet = true
+            }
         }
     }
     

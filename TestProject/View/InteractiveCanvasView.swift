@@ -9,8 +9,14 @@ import SwiftUI
 import UIKit
 
 struct InteractiveCanvasView: UIViewRepresentable {
-    @Binding var photos: [PhotoFrame]
-    @Binding var selectedPhotoId: UUID?
+    let photos: [PhotoFrame]
+    let selectedPhotoId: UUID?
+    
+    // Action closures để đẩy sự kiện về ViewModel
+    let onUpdatePhotoFrame: (UUID, FrameRect, Double) -> Void
+    let onSelectPhoto: (UUID) -> Void
+    let onDeletePhoto: (UUID) -> Void
+    let onBackgroundTap: () -> Void
     
     func makeCoordinator() -> Coordinator {
         Coordinator(self)
@@ -25,18 +31,29 @@ struct InteractiveCanvasView: UIViewRepresentable {
         scrollView.showsVerticalScrollIndicator = false
         scrollView.backgroundColor = .clear
         
+        let zoomContainerView = PassThroughView(frame: CGRect(x: 0, y: 0, width: 1000, height: 1000))
+        zoomContainerView.backgroundColor = .clear
+        scrollView.addSubview(zoomContainerView)
+        
         let containerView = UIView(frame: CGRect(x: 0, y: 0, width: 1000, height: 1000))
         containerView.backgroundColor = .canvas
         containerView.clipsToBounds = true
-        scrollView.addSubview(containerView)
-        scrollView.contentSize = containerView.bounds.size
+        zoomContainerView.addSubview(containerView)
+        
+        let uiContainerView = PassThroughView(frame: CGRect(x: 0, y: 0, width: 1000, height: 1000))
+        uiContainerView.backgroundColor = .clear
+        uiContainerView.clipsToBounds = false
+        zoomContainerView.addSubview(uiContainerView)
+        
+        scrollView.contentSize = zoomContainerView.bounds.size
         
         DispatchQueue.main.async {
             scrollView.contentOffset = CGPoint.zero
         }
         
+        context.coordinator.zoomContainerView = zoomContainerView
         context.coordinator.containerView = containerView
-        context.coordinator.scrollView = scrollView
+        context.coordinator.uiContainerView = uiContainerView
         
         let tapGesture = UITapGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.handleBackgroundTap(_:)))
         tapGesture.cancelsTouchesInView = false
@@ -52,7 +69,9 @@ struct InteractiveCanvasView: UIViewRepresentable {
     
     class Coordinator: NSObject, UIScrollViewDelegate, UIGestureRecognizerDelegate {
         var parent: InteractiveCanvasView
+        weak var zoomContainerView: UIView?
         weak var containerView: UIView?
+        weak var uiContainerView: PassThroughView?
         weak var scrollView: UIScrollView?
         
         var photoViews: [UUID: PhotoContainerView] = [:]
@@ -62,7 +81,7 @@ struct InteractiveCanvasView: UIViewRepresentable {
         }
         
         func viewForZooming(in scrollView: UIScrollView) -> UIView? {
-            return containerView
+            return zoomContainerView
         }
         
         func scrollViewDidZoom(_ scrollView: UIScrollView) {
@@ -77,9 +96,7 @@ struct InteractiveCanvasView: UIViewRepresentable {
         }
         
         @objc func handleBackgroundTap(_ sender: UITapGestureRecognizer) {
-            DispatchQueue.main.async {
-                self.parent.selectedPhotoId = nil
-            }
+            parent.onBackgroundTap()
         }
         
         func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldReceive touch: UITouch) -> Bool {
@@ -95,6 +112,7 @@ struct InteractiveCanvasView: UIViewRepresentable {
             let photoIds = Set(photos.map { $0.id })
             for (id, view) in photoViews {
                 if !photoIds.contains(id) {
+                    view.imageView.removeFromSuperview()
                     view.removeFromSuperview()
                     photoViews.removeValue(forKey: id)
                 }
@@ -109,7 +127,8 @@ struct InteractiveCanvasView: UIViewRepresentable {
                 } else {
                     let newView = PhotoContainerView(photo: photo, coordinator: self)
                     newView.updateCanvasZoomScale(scrollView?.zoomScale ?? 1.0)
-                    containerView.addSubview(newView)
+                    uiContainerView?.addSubview(newView)
+                    containerView.addSubview(newView.imageView)
                     photoViews[photo.id] = newView
                     newView.update(with: photo, isSelected: photo.id == selectedPhotoId)
                 }
@@ -123,33 +142,50 @@ struct InteractiveCanvasView: UIViewRepresentable {
         ///   - newFrame: Khung toạ độ mới (FrameRect).
         ///   - newRotation: Góc xoay mới (Double).
         func updatePhotoFrame(id: UUID, newFrame: FrameRect, newRotation: Double) {
-            if let index = parent.photos.firstIndex(where: { $0.id == id }) {
-                DispatchQueue.main.async {
-                    self.parent.photos[index].frame = newFrame
-                    self.parent.photos[index].rotation = newRotation
-                }
+            DispatchQueue.main.async {
+                self.parent.onUpdatePhotoFrame(id, newFrame, newRotation)
             }
         }
         
         func selectPhoto(id: UUID) {
+            // Hiệu ứng visual tạm thời trước khi ViewModel cập nhật mảng
+            if let view = photoViews[id] {
+                uiContainerView?.bringSubviewToFront(view)
+                containerView?.bringSubviewToFront(view.imageView)
+            }
+            
             if parent.selectedPhotoId != id {
                 DispatchQueue.main.async {
-                    self.parent.selectedPhotoId = id
+                    self.parent.onSelectPhoto(id)
                 }
             }
         }
         
         func deletePhoto(id: UUID) {
-            if let index = parent.photos.firstIndex(where: { $0.id == id }) {
-                DispatchQueue.main.async {
-                    self.parent.photos.remove(at: index)
-                    if self.parent.selectedPhotoId == id {
-                        self.parent.selectedPhotoId = nil
-                    }
-                }
+            DispatchQueue.main.async {
+                self.parent.onDeletePhoto(id)
             }
         }
     }
 }
 
-
+// Lớp View cho phép Touch đi xuyên qua những phần trong suốt (bằng cách trả về nil nếu hit vào chính nó)
+class PassThroughView: UIView {
+    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        // Duyệt ngược danh sách subviews (view nào add sau/nổi lên trên thì xét trước)
+        for subview in subviews.reversed() {
+            guard subview.isUserInteractionEnabled, !subview.isHidden, subview.alpha >= 0.01 else { continue }
+            
+            // Chuyển đổi toạ độ sang subview
+            let pointInSubview = subview.convert(point, from: self)
+            
+            // Hỏi subview xem nó (hoặc con của nó) có nhận touch này không
+            if let hitView = subview.hitTest(pointInSubview, with: event) {
+                return hitView
+            }
+        }
+        
+        // Nếu không có subview nào nhận (chạm vào nền trống), trả về nil để xuyên qua
+        return nil
+    }
+}

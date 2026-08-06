@@ -11,15 +11,14 @@ struct ProjectRow: View {
     let project: Project
     
     var body: some View {
-        HStack {
+        HStack(spacing: 16) {
             Text(project.name)
-                .font(.system(.body, design: .rounded))
-                .fontWeight(.medium)
-                .padding(.leading, 8)
-    
+                .font(.system(.headline, design: .rounded))
+                .foregroundColor(.primary)
             Spacer()
-
         }
-        .padding(.vertical, 8)
+        .padding(14)
+        .background(Color(.listgray))
+        .cornerRadius(14)
     }
 }
