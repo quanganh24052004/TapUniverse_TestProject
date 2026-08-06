@@ -50,7 +50,12 @@ class PhotoContainerView: UIView {
     var initialDistanceInSuper: CGFloat = 0
     
     // Lưu lại zoom scale của canvas để tự động điều chỉnh kích thước UI ngược lại
-    var currentCanvasZoomScale: CGFloat = 1.0
+    var currentCanvasZoomScale: CGFloat = 1.0 {
+        didSet {
+            // Cập nhật lại khung subviews mỗi khi tỷ lệ thu phóng bị thay đổi
+            updateSubviewsFrames(isSelected: isSelected)
+        }
+    }
     
     init(photo: PhotoFrame, coordinator: InteractiveCanvasView.Coordinator) {
         self.photoId = photo.id
@@ -135,6 +140,12 @@ class PhotoContainerView: UIView {
     @objc private func handleDelete() {
         coordinator?.deletePhoto(id: photoId)
     }
+    
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        // Đảm bảo mỗi khi layout thay đổi, các nút không bao giờ bị méo/nhỏ sai tỷ lệ
+        updateSubviewsFrames(isSelected: isSelected)
+    }
 }
 
 // MARK: - 2. Layout & Hit-Testing
@@ -170,7 +181,8 @@ extension PhotoContainerView {
     }
     
     func updateSubviewsFrames(isSelected: Bool) {
-        let inverseScale = 1.0 / currentCanvasZoomScale
+        let inverseScale = currentCanvasZoomScale > 0 ? (1.0 / currentCanvasZoomScale) : 1.0
+        
         self.layer.borderWidth = isSelected ? (2.0 * inverseScale) : 0
         
         let buttonSize: CGFloat = 30
@@ -186,7 +198,9 @@ extension PhotoContainerView {
         
         for handle in cornerHandles {
             handle.isHidden = !isSelected
+            handle.transform = CGAffineTransform(scaleX: inverseScale, y: inverseScale)
         }
+        deleteButton.transform = CGAffineTransform(scaleX: inverseScale, y: inverseScale)
     }
 }
 
@@ -223,15 +237,6 @@ extension PhotoContainerView {
     // Nghịch đảo thu phóng để các UI của ảnh không bị thay đổi
     func updateCanvasZoomScale(_ scale: CGFloat) {
         currentCanvasZoomScale = scale
-        let inverseScale = 1.0 / scale
-        let inverseTransform = CGAffineTransform(scaleX: inverseScale, y: inverseScale)
-        
-        deleteButton.transform = inverseTransform
-        for handle in cornerHandles {
-            handle.transform = inverseTransform
-        }
-        
-        updateSubviewsFrames(isSelected: !deleteButton.isHidden)
     }
     
     // UIKit -> SwiftUI

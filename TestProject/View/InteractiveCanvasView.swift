@@ -56,6 +56,7 @@ struct InteractiveCanvasView: UIViewRepresentable {
         context.coordinator.zoomContainerView = zoomContainerView
         context.coordinator.containerView = containerView
         context.coordinator.uiContainerView = uiContainerView
+        context.coordinator.scrollView = scrollView
         
         let tapGesture = UITapGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.handleBackgroundTap(_:)))
         tapGesture.cancelsTouchesInView = false
