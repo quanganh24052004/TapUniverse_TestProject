@@ -67,7 +67,7 @@ struct InteractiveCanvasView: UIViewRepresentable {
     }
     
     func updateUIView(_ scrollView: UIScrollView, context: Context) {
-        context.coordinator.update(photos: photos, selectedPhotoId: selectedPhotoId)
+        context.coordinator.update(scrollView: scrollView, photos: photos, selectedPhotoId: selectedPhotoId)
     }
     
     class Coordinator: NSObject, UIScrollViewDelegate, UIGestureRecognizerDelegate {
@@ -108,8 +108,7 @@ struct InteractiveCanvasView: UIViewRepresentable {
             }
             return true
         }
-        
-        func update(photos: [PhotoFrame], selectedPhotoId: UUID?) {
+        func update(scrollView: UIScrollView, photos: [PhotoFrame], selectedPhotoId: UUID?) {
             guard let containerView = containerView else { return }
             
             let photoIds = Set(photos.map { $0.id })
@@ -129,11 +128,16 @@ struct InteractiveCanvasView: UIViewRepresentable {
                     }
                 } else {
                     let newView = PhotoContainerView(photo: photo, coordinator: self)
-                    newView.updateCanvasZoomScale(scrollView?.zoomScale ?? 1.0)
                     uiContainerView?.addSubview(newView)
                     containerView.addSubview(newView.imageView)
                     photoViews[photo.id] = newView
                     newView.update(with: photo, isSelected: photo.id == selectedPhotoId)
+                    
+                    // Khắc phục triệt để: Đợi view hoàn tất layout trong hierarchy rồi mới áp dụng scale 
+                    // để tránh bị UIKit ghi đè/tính sai transform ở frame đầu tiên.
+                    DispatchQueue.main.async {
+                        newView.updateCanvasZoomScale(scrollView.zoomScale)
+                    }
                 }
             }
         }
