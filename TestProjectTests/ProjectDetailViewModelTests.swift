@@ -97,4 +97,51 @@ final class ProjectDetailViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.selectedProjectDetail?.name, "Local Detail")
         XCTAssertEqual(viewModel.saveStatus, "Đã tải từ máy")
     }
+    
+    // MARK: - Test Auto-Save
+    func test_AutoSave_TriggeredAfterDebounce() async throws {
+        // Arrange
+        let fakeDetail = ProjectDetail(id: 99, name: "Auto Save Detail", photos: [])
+        viewModel.selectedProjectDetail = fakeDetail
+        
+        // Đợi 1.2s để Combine debounce xử lý xong sự kiện "isFirstLoad" và bỏ qua nó
+        try await Task.sleep(nanoseconds: 1_200_000_000)
+        
+        // Act
+        // Sửa đổi dữ liệu để kích hoạt auto-save thực sự
+        let newPhoto = PhotoFrame(id: UUID(), url: "new.jpg", frame: FrameRect(x: 0, y: 0, width: 10, height: 10))
+        viewModel.selectedProjectDetail?.photos.append(newPhoto)
+        
+        // Auto-save sử dụng debounce 1.0 giây, ta cần đợi hơn 1.0 giây
+        try await Task.sleep(nanoseconds: 1_200_000_000)
+        
+        // Assert
+        XCTAssertTrue(viewModel.saveStatus.contains("Đã lưu cục bộ lúc"))
+        
+        // Kiểm tra xem dữ liệu có thực sự được ghi xuống UserDefaults không
+        guard let data = UserDefaults.standard.data(forKey: testLocalKey),
+              let savedDetail = try? JSONDecoder().decode(ProjectDetail.self, from: data) else {
+            XCTFail("Không tìm thấy dữ liệu trong UserDefaults")
+            return
+        }
+        XCTAssertEqual(savedDetail.photos.count, 1)
+        XCTAssertEqual(savedDetail.photos.first?.url, "new.jpg")
+    }
+    
+    // MARK: - Test Export
+    func test_TriggerExportCanvas_EmptyPhotos() async {
+        // Arrange
+        viewModel.selectedProjectDetail = ProjectDetail(id: 99, name: "Empty", photos: [])
+        
+        // Act
+        viewModel.triggerExportCanvas()
+        
+        // Đợi background task hoàn thành
+        try? await Task.sleep(nanoseconds: 100_000_000)
+        
+        // Assert
+        XCTAssertFalse(viewModel.isShowingShareSheet)
+        XCTAssertNil(viewModel.exportItem)
+        XCTAssertFalse(viewModel.isExporting)
+    }
 }
