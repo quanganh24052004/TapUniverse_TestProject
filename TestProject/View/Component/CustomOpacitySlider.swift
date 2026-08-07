@@ -19,7 +19,6 @@ struct CustomOpacitySlider: View {
             GeometryReader { geometry in
                 let width = geometry.size.width
                 let thumbSize: CGFloat = 26
-                // Tính toán vị trí ngang của nút trượt dựa trên giá trị opacity
                 let thumbOffset = CGFloat(opacity) * (width - thumbSize)
                 
                 ZStack(alignment: .leading) {

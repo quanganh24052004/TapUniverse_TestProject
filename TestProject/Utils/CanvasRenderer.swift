@@ -15,9 +15,9 @@ class CanvasRenderer {
         // 1. Ép cứng kích thước Canvas chuẩn theo AppConstants
         let targetSize = AppConstants.Canvas.defaultSize
         
-        // 2. Cấu hình định dạng không bị ảnh hưởng bởi tỷ lệ scale của thiết bị (1 point = 1 pixel)
+        // 2. Cấu hình định dạng scale cao hơn để ảnh nét gấp 3 lần (chuẩn Super Retina)
         let format = UIGraphicsImageRendererFormat()
-        format.scale = 1.0
+        format.scale = 3.0
         format.opaque = true
         
         let renderer = UIGraphicsImageRenderer(size: targetSize, format: format)
@@ -39,13 +39,24 @@ class CanvasRenderer {
                 let uiImage: UIImage
                 if let cached = ImageCacheManager.shared.getImage(forKey: photo.url) {
                     uiImage = cached
-                } else if let url = URL(string: photo.url),
-                          let data = try? Data(contentsOf: url),
-                          let downloaded = UIImage(data: data) {
-                    uiImage = downloaded
-                    ImageCacheManager.shared.saveImage(downloaded, forKey: photo.url)
                 } else {
-                    continue
+                    let absoluteURL: URL?
+                    if photo.url.starts(with: "http") {
+                        absoluteURL = URL(string: photo.url)
+                    } else {
+                        let filename = (photo.url as NSString).lastPathComponent
+                        let docDir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first
+                        absoluteURL = docDir?.appendingPathComponent(filename)
+                    }
+                    
+                    if let url = absoluteURL,
+                       let data = try? Data(contentsOf: url),
+                       let downloaded = UIImage(data: data) {
+                        uiImage = downloaded
+                        ImageCacheManager.shared.saveImage(downloaded, forKey: photo.url)
+                    } else {
+                        continue
+                    }
                 }
                 
                 // Lưu lại trạng thái ngữ cảnh đồ họa trước khi biến đổi hình học
@@ -76,7 +87,7 @@ class CanvasRenderer {
             }
         }
         
-        // Trả về dữ liệu ảnh nén định dạng JPEG với chất lượng 90%
-        return renderedImage.jpegData(compressionQuality: 0.9)
+        // Trả về dữ liệu ảnh nén định dạng JPEG với chất lượng 100%
+        return renderedImage.jpegData(compressionQuality: 1)
     }
 }

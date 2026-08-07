@@ -104,9 +104,22 @@ class PhotoContainerView: UIView {
             return
         }
         
-        guard let imageURL = URL(string: url) else { return }
+        let absoluteURL: URL?
+        if url.starts(with: "http") {
+            absoluteURL = URL(string: url)
+        } else {
+            // Lấy tên file gốc (Bỏ qua đường dẫn tuyệt đối bị hỏng nếu có)
+            let filename = (url as NSString).lastPathComponent
+            if let docDir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
+                absoluteURL = docDir.appendingPathComponent(filename)
+            } else {
+                absoluteURL = nil
+            }
+        }
         
-        if imageURL.isFileURL {
+        guard let imageURL = absoluteURL else { return }
+        
+        if !url.starts(with: "http") {
             DispatchQueue.global(qos: .userInitiated).async { [weak self] in
                 if let data = try? Data(contentsOf: imageURL), let image = UIImage(data: data) {
                     ImageCacheManager.shared.saveImage(image, forKey: url)

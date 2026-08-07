@@ -14,7 +14,6 @@ struct ProjectDetailView: View {
     var body: some View {
         VStack(spacing: 0) {
             
-            // Toolbar Điều hướng & Xuất bản nâng cấp
             HStack {
                 Button(action: {
                     saveAndCloseProject()
@@ -42,7 +41,6 @@ struct ProjectDetailView: View {
                 
                 Spacer()
                 
-                // NÚT XUẤT BẢN CANVASES (SCREEN 3)
                 Button(action: {
                     viewModel.triggerExportCanvas()
                 }) {
@@ -60,7 +58,6 @@ struct ProjectDetailView: View {
             .padding()
             .background(Color(.systemBackground))
             
-            // Vùng vẽ Canvas (UIKit Bridge - Giai đoạn 3)
             GeometryReader { geometry in
                 let canvasSize = geometry.size
                 
@@ -98,11 +95,9 @@ struct ProjectDetailView: View {
                         await viewModel.loadProjectDetail()
                     }
                 }
-                // Lưu kích thước thật của Canvas để phục vụ lúc kết xuất đồ họa
                 .preference(key: CanvasSizePreferenceKey.self, value: canvasSize)
             }
             
-            // Custom Slider tinh chỉnh Opacity (Chỉ hiển thị khi có ảnh được chọn)
             if let selectedId = viewModel.selectedPhotoId,
                let selectedIndex = viewModel.selectedProjectDetail?.photos.firstIndex(where: { $0.id == selectedId }) {
                 
@@ -114,7 +109,6 @@ struct ProjectDetailView: View {
                 .animation(.easeInOut, value: viewModel.selectedPhotoId)
             }
             
-            // Nút "Add Photo" mở Photo Picker
             Button(action: {
                 viewModel.isShowingPhotoPicker = true
             }) {
@@ -136,7 +130,6 @@ struct ProjectDetailView: View {
                 viewModel.addPhotos(urls: selectedUrls, into: &viewModel.selectedPhotoId)
             }
         }
-        // HIỂN THỊ TRÌNH CHIA SẺ HỆ THỐNG KHI ĐÃ RENDER XONG JPEG
         .sheet(isPresented: $viewModel.isShowingShareSheet, onDismiss: { viewModel.exportItem = nil }) {
             if let imageToShare = viewModel.exportItem {
                 ActivityView(activityItems: [imageToShare])
@@ -145,12 +138,11 @@ struct ProjectDetailView: View {
     }
     
     private func saveAndCloseProject() {
-        // Dismiss ngay lập tức để ứng dụng phản hồi mượt mà không có độ trễ
         dismiss()
         
         Task {
             print("Đang chuẩn bị dữ liệu và lưu cục bộ tức thì...")
-            viewModel.prepareForExit() // Xử lý Race Condition, lưu đè bỏ qua debounce
+            viewModel.prepareForExit()
             
             print("Đang đồng bộ dự án hiện tại lên server ngầm...")
             await viewModel.saveProject()
@@ -158,7 +150,6 @@ struct ProjectDetailView: View {
     }
 }
 
-// Trợ giúp lưu trữ thông tin kích thước Canvas hiển thị
 struct CanvasSizePreferenceKey: PreferenceKey {
     static var defaultValue: CGSize = .zero
     static func reduce(value: inout CGSize, nextValue: () -> CGSize) {

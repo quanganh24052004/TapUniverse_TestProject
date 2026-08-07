@@ -19,7 +19,7 @@ class PhotoLibraryManager: ObservableObject {
             }
         }
     }
-    @Published var assets: PHFetchResult<PHAsset>?
+    @Published var assets: [PHAsset] = []
     
     let imageManager = PHCachingImageManager()
     
@@ -66,8 +66,13 @@ class PhotoLibraryManager: ObservableObject {
         options.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
         
         let fetchedAssets = PHAsset.fetchAssets(in: collection, options: options)
+        var tempAssets: [PHAsset] = []
+        fetchedAssets.enumerateObjects { (asset, index, stop) in
+            tempAssets.append(asset)
+        }
+        
         DispatchQueue.main.async {
-            self.assets = fetchedAssets
+            self.assets = tempAssets
         }
     }
     

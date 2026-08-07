@@ -6,6 +6,31 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		0FB2D9393025D794002799F5 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 0FB2D9373025D794002799F5 /* Assets.xcassets */; };
+		0FB2D93A3025D794002799F5 /* TestProjectApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FB2D91A3025D794002799F5 /* TestProjectApp.swift */; };
+		0FB2D93B3025D794002799F5 /* PhotoContainerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FB2D91C3025D794002799F5 /* PhotoContainerView.swift */; };
+		0FB2D93C3025D794002799F5 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FB2D91E3025D794002799F5 /* Models.swift */; };
+		0FB2D93D3025D794002799F5 /* NetworkManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FB2D9203025D794002799F5 /* NetworkManager.swift */; };
+		0FB2D93E3025D794002799F5 /* LocalProjectRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FB2D9223025D794002799F5 /* LocalProjectRepository.swift */; };
+		0FB2D93F3025D794002799F5 /* AppConstants.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FB2D9243025D794002799F5 /* AppConstants.swift */; };
+		0FB2D9403025D794002799F5 /* CanvasRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FB2D9253025D794002799F5 /* CanvasRenderer.swift */; };
+		0FB2D9413025D794002799F5 /* ImageCacheManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FB2D9263025D794002799F5 /* ImageCacheManager.swift */; };
+		0FB2D9423025D794002799F5 /* ActivityView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FB2D9283025D794002799F5 /* ActivityView.swift */; };
+		0FB2D9433025D794002799F5 /* AddProjectView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FB2D9293025D794002799F5 /* AddProjectView.swift */; };
+		0FB2D9443025D794002799F5 /* AssetThumbnailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FB2D92A3025D794002799F5 /* AssetThumbnailView.swift */; };
+		0FB2D9453025D794002799F5 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FB2D92B3025D794002799F5 /* ContentView.swift */; };
+		0FB2D9463025D794002799F5 /* CustomOpacitySlider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FB2D92C3025D794002799F5 /* CustomOpacitySlider.swift */; };
+		0FB2D9473025D794002799F5 /* CustomPhotoPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FB2D92D3025D794002799F5 /* CustomPhotoPicker.swift */; };
+		0FB2D9483025D794002799F5 /* InteractiveCanvasView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FB2D92E3025D794002799F5 /* InteractiveCanvasView.swift */; };
+		0FB2D9493025D794002799F5 /* ProjectDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FB2D92F3025D794002799F5 /* ProjectDetailView.swift */; };
+		0FB2D94A3025D794002799F5 /* ProjectListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FB2D9303025D794002799F5 /* ProjectListView.swift */; };
+		0FB2D94B3025D794002799F5 /* ProjectRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FB2D9313025D794002799F5 /* ProjectRow.swift */; };
+		0FB2D94C3025D794002799F5 /* PhotoLibraryManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FB2D9333025D794002799F5 /* PhotoLibraryManager.swift */; };
+		0FB2D94D3025D794002799F5 /* ProjectDetailViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FB2D9343025D794002799F5 /* ProjectDetailViewModel.swift */; };
+		0FB2D94E3025D794002799F5 /* ProjectListViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FB2D9353025D794002799F5 /* ProjectListViewModel.swift */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		0FB09BFA3021D1640086A1C8 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -19,14 +44,31 @@
 /* Begin PBXFileReference section */
 		0F234569302037280040A437 /* TestProject.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TestProject.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		0FB09BF63021D1640086A1C8 /* TestProjectTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TestProjectTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		0FB2D91A3025D794002799F5 /* TestProjectApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TestProjectApp.swift; sourceTree = "<group>"; };
+		0FB2D91C3025D794002799F5 /* PhotoContainerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoContainerView.swift; sourceTree = "<group>"; };
+		0FB2D91E3025D794002799F5 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
+		0FB2D9203025D794002799F5 /* NetworkManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkManager.swift; sourceTree = "<group>"; };
+		0FB2D9223025D794002799F5 /* LocalProjectRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalProjectRepository.swift; sourceTree = "<group>"; };
+		0FB2D9243025D794002799F5 /* AppConstants.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppConstants.swift; sourceTree = "<group>"; };
+		0FB2D9253025D794002799F5 /* CanvasRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CanvasRenderer.swift; sourceTree = "<group>"; };
+		0FB2D9263025D794002799F5 /* ImageCacheManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageCacheManager.swift; sourceTree = "<group>"; };
+		0FB2D9283025D794002799F5 /* ActivityView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityView.swift; sourceTree = "<group>"; };
+		0FB2D9293025D794002799F5 /* AddProjectView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddProjectView.swift; sourceTree = "<group>"; };
+		0FB2D92A3025D794002799F5 /* AssetThumbnailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssetThumbnailView.swift; sourceTree = "<group>"; };
+		0FB2D92B3025D794002799F5 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		0FB2D92C3025D794002799F5 /* CustomOpacitySlider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomOpacitySlider.swift; sourceTree = "<group>"; };
+		0FB2D92D3025D794002799F5 /* CustomPhotoPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomPhotoPicker.swift; sourceTree = "<group>"; };
+		0FB2D92E3025D794002799F5 /* InteractiveCanvasView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InteractiveCanvasView.swift; sourceTree = "<group>"; };
+		0FB2D92F3025D794002799F5 /* ProjectDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectDetailView.swift; sourceTree = "<group>"; };
+		0FB2D9303025D794002799F5 /* ProjectListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectListView.swift; sourceTree = "<group>"; };
+		0FB2D9313025D794002799F5 /* ProjectRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectRow.swift; sourceTree = "<group>"; };
+		0FB2D9333025D794002799F5 /* PhotoLibraryManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoLibraryManager.swift; sourceTree = "<group>"; };
+		0FB2D9343025D794002799F5 /* ProjectDetailViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectDetailViewModel.swift; sourceTree = "<group>"; };
+		0FB2D9353025D794002799F5 /* ProjectListViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectListViewModel.swift; sourceTree = "<group>"; };
+		0FB2D9373025D794002799F5 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		0F6507BB30204BB2004BE986 /* TestProject */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = TestProject;
-			sourceTree = "<group>";
-		};
 		0FB09BF73021D1640086A1C8 /* TestProjectTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = TestProjectTests;
@@ -55,7 +97,7 @@
 		0F234560302037280040A437 = {
 			isa = PBXGroup;
 			children = (
-				0F6507BB30204BB2004BE986 /* TestProject */,
+				0FB2D9383025D794002799F5 /* TestProject */,
 				0FB09BF73021D1640086A1C8 /* TestProjectTests */,
 				0F23456A302037280040A437 /* Products */,
 			);
@@ -68,6 +110,107 @@
 				0FB09BF63021D1640086A1C8 /* TestProjectTests.xctest */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		0FB2D91B3025D794002799F5 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				0FB2D91A3025D794002799F5 /* TestProjectApp.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		0FB2D91D3025D794002799F5 /* Extension */ = {
+			isa = PBXGroup;
+			children = (
+				0FB2D91C3025D794002799F5 /* PhotoContainerView.swift */,
+			);
+			path = Extension;
+			sourceTree = "<group>";
+		};
+		0FB2D91F3025D794002799F5 /* Model */ = {
+			isa = PBXGroup;
+			children = (
+				0FB2D91E3025D794002799F5 /* Models.swift */,
+			);
+			path = Model;
+			sourceTree = "<group>";
+		};
+		0FB2D9213025D794002799F5 /* Network */ = {
+			isa = PBXGroup;
+			children = (
+				0FB2D9203025D794002799F5 /* NetworkManager.swift */,
+			);
+			path = Network;
+			sourceTree = "<group>";
+		};
+		0FB2D9233025D794002799F5 /* Repository */ = {
+			isa = PBXGroup;
+			children = (
+				0FB2D9223025D794002799F5 /* LocalProjectRepository.swift */,
+			);
+			path = Repository;
+			sourceTree = "<group>";
+		};
+		0FB2D9273025D794002799F5 /* Utils */ = {
+			isa = PBXGroup;
+			children = (
+				0FB2D9243025D794002799F5 /* AppConstants.swift */,
+				0FB2D9253025D794002799F5 /* CanvasRenderer.swift */,
+				0FB2D9263025D794002799F5 /* ImageCacheManager.swift */,
+			);
+			path = Utils;
+			sourceTree = "<group>";
+		};
+		0FB2D9323025D794002799F5 /* View */ = {
+			isa = PBXGroup;
+			children = (
+				0FB2D94F3025E688002799F5 /* Component */,
+				0FB2D9303025D794002799F5 /* ProjectListView.swift */,
+				0FB2D9293025D794002799F5 /* AddProjectView.swift */,
+				0FB2D92F3025D794002799F5 /* ProjectDetailView.swift */,
+				0FB2D92A3025D794002799F5 /* AssetThumbnailView.swift */,
+				0FB2D92B3025D794002799F5 /* ContentView.swift */,
+				0FB2D92D3025D794002799F5 /* CustomPhotoPicker.swift */,
+				0FB2D92E3025D794002799F5 /* InteractiveCanvasView.swift */,
+				0FB2D9283025D794002799F5 /* ActivityView.swift */,
+			);
+			path = View;
+			sourceTree = "<group>";
+		};
+		0FB2D9363025D794002799F5 /* ViewModel */ = {
+			isa = PBXGroup;
+			children = (
+				0FB2D9333025D794002799F5 /* PhotoLibraryManager.swift */,
+				0FB2D9343025D794002799F5 /* ProjectDetailViewModel.swift */,
+				0FB2D9353025D794002799F5 /* ProjectListViewModel.swift */,
+			);
+			path = ViewModel;
+			sourceTree = "<group>";
+		};
+		0FB2D9383025D794002799F5 /* TestProject */ = {
+			isa = PBXGroup;
+			children = (
+				0FB2D91B3025D794002799F5 /* App */,
+				0FB2D9323025D794002799F5 /* View */,
+				0FB2D91D3025D794002799F5 /* Extension */,
+				0FB2D91F3025D794002799F5 /* Model */,
+				0FB2D9213025D794002799F5 /* Network */,
+				0FB2D9233025D794002799F5 /* Repository */,
+				0FB2D9273025D794002799F5 /* Utils */,
+				0FB2D9363025D794002799F5 /* ViewModel */,
+				0FB2D9373025D794002799F5 /* Assets.xcassets */,
+			);
+			path = TestProject;
+			sourceTree = "<group>";
+		};
+		0FB2D94F3025E688002799F5 /* Component */ = {
+			isa = PBXGroup;
+			children = (
+				0FB2D9313025D794002799F5 /* ProjectRow.swift */,
+				0FB2D92C3025D794002799F5 /* CustomOpacitySlider.swift */,
+			);
+			path = Component;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -84,9 +227,6 @@
 			buildRules = (
 			);
 			dependencies = (
-			);
-			fileSystemSynchronizedGroups = (
-				0F6507BB30204BB2004BE986 /* TestProject */,
 			);
 			name = TestProject;
 			packageProductDependencies = (
@@ -162,6 +302,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				0FB2D9393025D794002799F5 /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -179,6 +320,27 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				0FB2D93A3025D794002799F5 /* TestProjectApp.swift in Sources */,
+				0FB2D93B3025D794002799F5 /* PhotoContainerView.swift in Sources */,
+				0FB2D93C3025D794002799F5 /* Models.swift in Sources */,
+				0FB2D93D3025D794002799F5 /* NetworkManager.swift in Sources */,
+				0FB2D93E3025D794002799F5 /* LocalProjectRepository.swift in Sources */,
+				0FB2D93F3025D794002799F5 /* AppConstants.swift in Sources */,
+				0FB2D9403025D794002799F5 /* CanvasRenderer.swift in Sources */,
+				0FB2D9413025D794002799F5 /* ImageCacheManager.swift in Sources */,
+				0FB2D9423025D794002799F5 /* ActivityView.swift in Sources */,
+				0FB2D9433025D794002799F5 /* AddProjectView.swift in Sources */,
+				0FB2D9443025D794002799F5 /* AssetThumbnailView.swift in Sources */,
+				0FB2D9453025D794002799F5 /* ContentView.swift in Sources */,
+				0FB2D9463025D794002799F5 /* CustomOpacitySlider.swift in Sources */,
+				0FB2D9473025D794002799F5 /* CustomPhotoPicker.swift in Sources */,
+				0FB2D9483025D794002799F5 /* InteractiveCanvasView.swift in Sources */,
+				0FB2D9493025D794002799F5 /* ProjectDetailView.swift in Sources */,
+				0FB2D94A3025D794002799F5 /* ProjectListView.swift in Sources */,
+				0FB2D94B3025D794002799F5 /* ProjectRow.swift in Sources */,
+				0FB2D94C3025D794002799F5 /* PhotoLibraryManager.swift in Sources */,
+				0FB2D94D3025D794002799F5 /* ProjectDetailViewModel.swift in Sources */,
+				0FB2D94E3025D794002799F5 /* ProjectListViewModel.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

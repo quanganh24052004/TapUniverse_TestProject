@@ -30,30 +30,26 @@ struct CustomPhotoPicker: View {
                     
                     ScrollView {
                         LazyVGrid(columns: columns, spacing: 4) {
-                            if let assets = libraryManager.assets {
-                                ForEach(0..<assets.count, id: \.self) { index in
-                                    let asset = assets[index]
-                                    let isSelected = selectedAssets.contains(asset)
+                            ForEach(libraryManager.assets, id: \.localIdentifier) { asset in
+                                let isSelected = selectedAssets.contains(asset)
+                                
+                                ZStack(alignment: .bottomTrailing) {
+                                    AssetThumbnailView(
+                                        asset: asset,
+                                        imageManager: libraryManager.imageManager,
+                                        targetSize: CGSize(width: 300, height: 300)
+                                    )
+                                    .frame(minWidth: 0, maxWidth: .infinity)
+                                    .clipped()
                                     
-                                    ZStack(alignment: .bottomTrailing) {
-                                        AssetThumbnailView(
-                                            asset: asset,
-                                            imageManager: libraryManager.imageManager,
-                                            targetSize: CGSize(width: 300, height: 300)
-                                        )
-                                        .frame(minWidth: 0, maxWidth: .infinity)
-                                        .clipped()
-                                        
-                                        // Hiệu ứng tích chọn màu xanh dương
-                                        if isSelected {
-                                            Rectangle()
-                                                .stroke(Color.blue, lineWidth: 2)
-                                        }
+                                    if isSelected {
+                                        Rectangle()
+                                            .stroke(Color.blue, lineWidth: 2)
                                     }
-                                    .contentShape(Rectangle())
-                                    .onTapGesture {
-                                        toggleSelection(for: asset)
-                                    }
+                                }
+                                .contentShape(Rectangle())
+                                .onTapGesture {
+                                    toggleSelection(for: asset)
                                 }
                             }
                         }

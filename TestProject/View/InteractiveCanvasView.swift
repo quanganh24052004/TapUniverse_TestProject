@@ -12,7 +12,6 @@ struct InteractiveCanvasView: UIViewRepresentable {
     let photos: [PhotoFrame]
     let selectedPhotoId: UUID?
     
-    // Action closures để đẩy sự kiện về ViewModel
     let onUpdatePhotoFrame: (UUID, FrameRect, Double) -> Void
     let onSelectPhoto: (UUID) -> Void
     let onDeletePhoto: (UUID) -> Void
