@@ -42,7 +42,7 @@ struct AssetThumbnailView: View {
         options.deliveryMode = .opportunistic
         
         imageManager.requestImage(for: asset, targetSize: targetSize, contentMode: .aspectFill, options: options) { result, info in
-            if let result = result {
+            if let result {
                 self.image = result
             }
         }

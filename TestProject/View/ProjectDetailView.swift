@@ -108,7 +108,7 @@ struct ProjectDetailView: View {
                 
                 CustomOpacitySlider(opacity: Binding(
                     get: { viewModel.selectedProjectDetail?.photos[selectedIndex].opacity ?? 1.0 },
-                    set: { viewModel.selectedProjectDetail?.photos[selectedIndex].opacity = $0 }
+                    set: { viewModel.updatePhotoOpacity(id: selectedId, opacity: $0) }
                 ))
                 .transition(.move(edge: .bottom).combined(with: .opacity))
                 .animation(.easeInOut, value: viewModel.selectedPhotoId)
@@ -145,10 +145,15 @@ struct ProjectDetailView: View {
     }
     
     private func saveAndCloseProject() {
+        // Dismiss ngay lập tức để ứng dụng phản hồi mượt mà không có độ trễ
+        dismiss()
+        
         Task {
-            print("Đang lưu dự án hiện tại...")
+            print("Đang chuẩn bị dữ liệu và lưu cục bộ tức thì...")
+            viewModel.prepareForExit() // Xử lý Race Condition, lưu đè bỏ qua debounce
+            
+            print("Đang đồng bộ dự án hiện tại lên server ngầm...")
             await viewModel.saveProject()
-            dismiss()
         }
     }
 }

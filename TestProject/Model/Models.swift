@@ -11,6 +11,20 @@ import Foundation
 struct Project: Identifiable, Codable, Equatable, Hashable {
     let id: Int
     let name: String
+    var updatedAt: Date = Date()
+    
+    enum CodingKeys: String, CodingKey {
+        case id, name, updatedAt
+    }
+}
+
+extension Project {
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.id = try container.decode(Int.self, forKey: .id)
+        self.name = try container.decode(String.self, forKey: .name)
+        self.updatedAt = try container.decodeIfPresent(Date.self, forKey: .updatedAt) ?? Date()
+    }
 }
 
 // struct của Project
@@ -40,7 +54,9 @@ struct PhotoFrame: Identifiable, Codable, Equatable {
     enum CodingKeys: String, CodingKey {
         case id, url, frame, rotation, opacity
     }
-    
+}
+
+extension PhotoFrame {
     // Custom Decode để hỗ trợ lấy từ API (thiếu rotation, opacity, id)
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -49,15 +65,6 @@ struct PhotoFrame: Identifiable, Codable, Equatable {
         self.frame = try container.decode(FrameRect.self, forKey: .frame)
         self.rotation = try container.decodeIfPresent(Double.self, forKey: .rotation) ?? 0.0
         self.opacity = try container.decodeIfPresent(Double.self, forKey: .opacity) ?? 1.0
-    }
-    
-    // Constructor mặc định
-    init(id: UUID = UUID(), url: String, frame: FrameRect, rotation: Double = 0.0, opacity: Double = 1.0) {
-        self.id = id
-        self.url = url
-        self.frame = frame
-        self.rotation = rotation
-        self.opacity = opacity
     }
     
     // Custom Encode
@@ -75,6 +82,21 @@ struct ProjectDetail: Identifiable, Codable {
     let id: Int
     let name: String
     var photos: [PhotoFrame]
+    var updatedAt: Date = Date()
+    
+    enum CodingKeys: String, CodingKey {
+        case id, name, photos, updatedAt
+    }
+}
+
+extension ProjectDetail {
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.id = try container.decode(Int.self, forKey: .id)
+        self.name = try container.decode(String.self, forKey: .name)
+        self.photos = try container.decode([PhotoFrame].self, forKey: .photos)
+        self.updatedAt = try container.decodeIfPresent(Date.self, forKey: .updatedAt) ?? Date()
+    }
 }
 
 

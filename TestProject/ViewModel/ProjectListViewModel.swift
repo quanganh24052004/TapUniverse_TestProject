@@ -9,18 +9,17 @@ import Combine
 
 @MainActor
 class ProjectListViewModel: ObservableObject {
-    @Published var projects: [Project] = []
-    @Published var isLoading: Bool = false
-    @Published var errorMessage: String? = nil
+    @Published private(set) var projects: [Project] = []
+    @Published private(set) var isLoading: Bool = false
+    @Published private(set) var errorMessage: String? = nil
     
-    // Khóa lưu trữ trong UserDefaults
-    private let localProjectsKey = "saved_local_projects"
-    
-    // Dependency Injection cho Network
+    // Dependency Injection
     private let networkService: NetworkServiceProtocol
+    private let localRepository: LocalProjectRepositoryProtocol
     
-    init(networkService: NetworkServiceProtocol? = nil) {
+    init(networkService: NetworkServiceProtocol? = nil, localRepository: LocalProjectRepositoryProtocol? = nil) {
         self.networkService = networkService ?? NetworkManager.shared
+        self.localRepository = localRepository ?? LocalProjectRepository.shared
         // Khởi tạo và tự động tải danh sách đã lưu cục bộ lên trước để UI hiển thị tức thì
         loadProjectsFromLocalStorage()
     }
@@ -32,19 +31,25 @@ class ProjectListViewModel: ObservableObject {
         do {
             let apiProjects = try await networkService.fetchProjects()
             
-            // Hợp nhất dữ liệu: Giữ lại cả dự án từ API và các dự án do user tự tạo cục bộ
-            let localSaved = getLocalProjectsFromStorage()
+            // Hợp nhất dữ liệu: So sánh updatedAt giữa API và Local
+            let localSaved = localRepository.loadProjects()
             
-            // Loại bỏ trùng lặp dựa trên ID
             var mergedProjects = apiProjects
             for localProj in localSaved {
-                if !mergedProjects.contains(where: { $0.id == localProj.id }) {
+                if let index = mergedProjects.firstIndex(where: { $0.id == localProj.id }) {
+                    // Nếu trùng ID, giữ lại bản mới hơn
+                    let apiProj = mergedProjects[index]
+                    if localProj.updatedAt > apiProj.updatedAt {
+                        mergedProjects[index] = localProj
+                    }
+                } else {
+                    // Nếu local có mà API không có (hoặc chưa đồng bộ), thêm vào
                     mergedProjects.append(localProj)
                 }
             }
             
             self.projects = mergedProjects
-            saveProjectsToLocalStorage(self.projects) // Cập nhật lại bộ nhớ đệm cục bộ
+            localRepository.saveProjects(self.projects) // Cập nhật lại bộ nhớ đệm cục bộ
             
         } catch {
             // Nếu mất mạng hoặc API lỗi, ứng dụng vẫn hiển thị danh sách đã lưu cục bộ trước đó
@@ -64,53 +69,31 @@ class ProjectListViewModel: ObservableObject {
         projects.append(newProject)
         
         // Lưu trữ lại toàn bộ danh sách mới xuống thiết bị
-        saveProjectsToLocalStorage(self.projects)
+        localRepository.saveProjects(self.projects)
     }
     
     /// Xoá dự án cục bộ tại các vị trí được chỉ định.
     ///
     /// - Parameter offsets: Tập hợp các vị trí (index) của dự án cần xoá.
     func removeProject(at offsets: IndexSet) {
+        // Lấy danh sách ID để xóa chi tiết trước
+        let idsToDelete = offsets.map { projects[$0].id }
+        
         projects.remove(atOffsets: offsets)
         
         // Cập nhật lại danh sách sau khi xóa xuống thiết bị
-        saveProjectsToLocalStorage(self.projects)
-    }
-    
-    // MARK: - Helper Methods (Xử lý UserDefaults & Codable)
-    
-    /// Ghi danh sách dự án xuống bộ nhớ lưu trữ vĩnh viễn (UserDefaults).
-    ///
-    /// - Parameter projectsList: Danh sách các dự án cần lưu.
-    private func saveProjectsToLocalStorage(_ projectsList: [Project]) {
-        do {
-            let encoder = JSONEncoder()
-            let data = try encoder.encode(projectsList)
-            UserDefaults.standard.set(data, forKey: AppConstants.UserDefaultsKeys.savedLocalProjects)
-            print("Đã lưu thành công danh sách dự án cục bộ.")
-        } catch {
-            print("Lỗi mã hóa dữ liệu dự án: \(error)")
+        localRepository.saveProjects(self.projects)
+        
+        // Đồng thời xóa luôn detail khỏi ổ cứng để giải phóng bộ nhớ
+        for id in idsToDelete {
+            localRepository.deleteProjectDetail(projectId: id)
         }
     }
+    
+    // MARK: - Helper Methods
     
     /// Cập nhật trạng thái ứng dụng bằng cách tải dữ liệu từ bộ nhớ cục bộ.
     private func loadProjectsFromLocalStorage() {
-        self.projects = getLocalProjectsFromStorage()
-    }
-    
-    /// Đọc và giải mã dữ liệu JSON từ UserDefaults thành mảng Project.
-    ///
-    /// - Returns: Mảng chứa các đối tượng `Project` đã lưu, hoặc mảng rỗng nếu chưa có/lỗi.
-    private func getLocalProjectsFromStorage() -> [Project] {
-        guard let data = UserDefaults.standard.data(forKey: AppConstants.UserDefaultsKeys.savedLocalProjects) else {
-            return []
-        }
-        do {
-            let decoder = JSONDecoder()
-            return try decoder.decode([Project].self, from: data)
-        } catch {
-            print("Lỗi giải mã danh sách dự án đã lưu: \(error)")
-            return []
-        }
+        self.projects = localRepository.loadProjects()
     }
 }

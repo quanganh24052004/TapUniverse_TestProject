@@ -9,10 +9,10 @@ import Combine
 
 @MainActor
 class ProjectDetailViewModel: ObservableObject {
-    @Published var selectedProjectDetail: ProjectDetail? = nil
-    @Published var isLoading: Bool = false
-    @Published var errorMessage: String? = nil
-    @Published var saveStatus: String = ""
+    @Published private(set) var selectedProjectDetail: ProjectDetail? = nil
+    @Published private(set) var isLoading: Bool = false
+    @Published private(set) var errorMessage: String? = nil
+    @Published private(set) var saveStatus: String = ""
     
     // UI States
     @Published var selectedPhotoId: UUID? = nil
@@ -27,11 +27,13 @@ class ProjectDetailViewModel: ObservableObject {
     let projectId: Int
     let projectName: String
     private let networkService: NetworkServiceProtocol
+    private let localRepository: LocalProjectRepositoryProtocol
     
-    init(projectId: Int, projectName: String, networkService: NetworkServiceProtocol? = nil) {
+    init(projectId: Int, projectName: String, networkService: NetworkServiceProtocol? = nil, localRepository: LocalProjectRepositoryProtocol? = nil) {
         self.projectId = projectId
         self.projectName = projectName
         self.networkService = networkService ?? NetworkManager.shared
+        self.localRepository = localRepository ?? LocalProjectRepository.shared
         
         setupAutoSave()
     }
@@ -80,46 +82,43 @@ class ProjectDetailViewModel: ObservableObject {
     /// Đồng bộ hoá (lưu) thông tin dự án hiện tại lên Server (Giai đoạn 6).
     func saveProject() async {
         guard let projectDetail = selectedProjectDetail else { return }
-        isLoading = true
         saveStatus = "Đang đồng bộ..."
         do {
             try await networkService.saveProjectDetail(projectDetail: projectDetail)
             saveStatus = "Đã đồng bộ máy chủ"
         } catch {
-            self.errorMessage = "Lỗi khi lưu dự án."
             saveStatus = "Đồng bộ thất bại"
         }
-        isLoading = false
     }
     
     // MARK: - Local Storage
     
+    func prepareForExit() {
+        guard var detail = selectedProjectDetail else { return }
+        detail.updatedAt = Date()
+        self.selectedProjectDetail = detail
+        
+        self.saveStatus = "Đang lưu..."
+        localRepository.saveProjectDetail(detail)
+        let formatter = DateFormatter()
+        formatter.dateFormat = "HH:mm:ss"
+        self.saveStatus = "Đã lưu cục bộ lúc \(formatter.string(from: Date()))"
+    }
+    
     private func saveProjectToLocalStorage(_ detail: ProjectDetail) {
         self.saveStatus = "Đang lưu..."
-        do {
-            let data = try JSONEncoder().encode(detail)
-            let key = AppConstants.UserDefaultsKeys.savedProjectDetail(projectId: projectId)
-            UserDefaults.standard.set(data, forKey: key)
-            let formatter = DateFormatter()
-            formatter.dateFormat = "HH:mm:ss"
-            self.saveStatus = "Đã lưu cục bộ lúc \(formatter.string(from: Date()))"
-        } catch {
-            self.saveStatus = "Lưu cục bộ thất bại"
-            print("Lỗi lưu local storage: \(error)")
-        }
+        var updatedDetail = detail
+        updatedDetail.updatedAt = Date()
+        
+        localRepository.saveProjectDetail(updatedDetail)
+        
+        let formatter = DateFormatter()
+        formatter.dateFormat = "HH:mm:ss"
+        self.saveStatus = "Đã lưu cục bộ lúc \(formatter.string(from: Date()))"
     }
     
     private func loadProjectFromLocalStorage() -> ProjectDetail? {
-        let key = AppConstants.UserDefaultsKeys.savedProjectDetail(projectId: projectId)
-        guard let data = UserDefaults.standard.data(forKey: key) else {
-            return nil
-        }
-        do {
-            return try JSONDecoder().decode(ProjectDetail.self, from: data)
-        } catch {
-            print("Lỗi tải local storage: \(error)")
-            return nil
-        }
+        return localRepository.loadProjectDetail(projectId: projectId)
     }
     
     /// Thêm một hoặc nhiều ảnh mới từ URL vào chính giữa không gian Canvas.
@@ -181,6 +180,11 @@ class ProjectDetailViewModel: ObservableObject {
         selectedProjectDetail?.photos[index] = updatedPhoto
     }
     
+    func updatePhotoOpacity(id: UUID, opacity: Double) {
+        guard let index = selectedProjectDetail?.photos.firstIndex(where: { $0.id == id }) else { return }
+        selectedProjectDetail?.photos[index].opacity = opacity
+    }
+    
     /// Bắt đầu quá trình kết xuất ảnh. Cập nhật các UI state tương ứng.
     func triggerExportCanvas() {
         isExporting = true
@@ -194,11 +198,13 @@ class ProjectDetailViewModel: ObservableObject {
         }
     }
     
+    typealias ExportCompletionHandler = (UIImage?) -> Void
+    
     /// Kết xuất toàn bộ cấu trúc Canvas hiện tại thành một bức ảnh thực tế (JPEG).
     /// Quá trình này được đẩy sang Background Queue để không làm chặn (block) giao diện người dùng.
     ///
     /// - Parameter completion: Hàm callback trả về `UIImage` hoàn chỉnh, hoặc `nil` nếu rỗng/lỗi.
-    func exportCanvas(completion: @escaping (UIImage?) -> Void) {
+    func exportCanvas(completion: @escaping ExportCompletionHandler) {
         guard let photos = selectedProjectDetail?.photos, !photos.isEmpty else {
             completion(nil)
             return

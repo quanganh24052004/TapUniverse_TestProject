@@ -112,12 +112,10 @@ struct InteractiveCanvasView: UIViewRepresentable {
             guard let containerView = containerView else { return }
             
             let photoIds = Set(photos.map { $0.id })
-            for (id, view) in photoViews {
-                if !photoIds.contains(id) {
-                    view.imageView.removeFromSuperview()
-                    view.removeFromSuperview()
-                    photoViews.removeValue(forKey: id)
-                }
+            for (id, view) in photoViews where !photoIds.contains(id) {
+                view.imageView.removeFromSuperview()
+                view.removeFromSuperview()
+                photoViews.removeValue(forKey: id)
             }
             
             for photo in photos {
