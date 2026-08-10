@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct ProjectListView: View {
-    @StateObject var viewModel = ProjectListViewModel()
+    @State var viewModel = ProjectListViewModel()
     @State private var isShowingAddSheet = false
     
     var body: some View {

@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct ProjectDetailView: View {
-    @StateObject var viewModel: ProjectDetailViewModel
+    @State var viewModel: ProjectDetailViewModel
     @Environment(\.dismiss) var dismiss
     
     var body: some View {

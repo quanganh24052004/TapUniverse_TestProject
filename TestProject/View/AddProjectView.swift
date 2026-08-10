@@ -9,7 +9,7 @@ import SwiftUI
 
 struct AddProjectView: View {
     @Environment(\.dismiss) var dismiss
-    @ObservedObject var viewModel: ProjectListViewModel
+    @Bindable var viewModel: ProjectListViewModel
     @State private var projectName: String = ""
     @State private var showErrorAlert = false
     

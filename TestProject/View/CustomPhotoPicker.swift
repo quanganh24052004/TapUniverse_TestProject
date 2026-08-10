@@ -12,7 +12,7 @@ struct CustomPhotoPicker: View {
     @Environment(\.dismiss) var dismiss
     var onAddPhotos: ([String]) -> Void
     
-    @StateObject private var libraryManager = PhotoLibraryManager()
+    @State private var libraryManager = PhotoLibraryManager()
     
     @State private var selectedAssets: Set<PHAsset> = []
     @State private var isExporting = false
@@ -61,7 +61,9 @@ struct CustomPhotoPicker: View {
                         Text("Cần cấp quyền truy cập Ảnh")
                             .font(.headline)
                         Button("Cấp quyền") {
-                            libraryManager.requestAuthorization()
+                            Task {
+                                await libraryManager.requestAuthorization()
+                            }
                         }
                         .padding()
                         .buttonStyle(.borderedProminent)
@@ -111,8 +113,8 @@ struct CustomPhotoPicker: View {
                     .disabled(selectedAssets.isEmpty || isExporting)
                 }
             }
-            .onAppear {
-                libraryManager.requestAuthorization()
+            .task {
+                await libraryManager.requestAuthorization()
             }
         }
     }

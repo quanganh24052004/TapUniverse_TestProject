@@ -7,32 +7,32 @@
 
 import SwiftUI
 import Photos
-import Combine
+import Observation
 
-class PhotoLibraryManager: ObservableObject {
-    @Published var isAuthorized = false
-    @Published var albums: [PHAssetCollection] = []
-    @Published var selectedAlbum: PHAssetCollection? {
+@Observable
+@MainActor
+class PhotoLibraryManager {
+    var isAuthorized = false
+    var albums: [PHAssetCollection] = []
+    var selectedAlbum: PHAssetCollection? {
         didSet {
             if let album = selectedAlbum {
                 fetchAssets(in: album)
             }
         }
     }
-    @Published var assets: [PHAsset] = []
+    var assets: [PHAsset] = []
     
+    @ObservationIgnored
     let imageManager = PHCachingImageManager()
     
     init() {}
     
-    func requestAuthorization() {
-        PHPhotoLibrary.requestAuthorization(for: .readWrite) { [weak self] status in
-            DispatchQueue.main.async {
-                self?.isAuthorized = (status == .authorized || status == .limited)
-                if self?.isAuthorized == true {
-                    self?.fetchAlbums()
-                }
-            }
+    func requestAuthorization() async {
+        let status = await PHPhotoLibrary.requestAuthorization(for: .readWrite)
+        self.isAuthorized = (status == .authorized || status == .limited)
+        if self.isAuthorized {
+            self.fetchAlbums()
         }
     }
     
@@ -53,11 +53,9 @@ class PhotoLibraryManager: ObservableObject {
             }
         }
         
-        DispatchQueue.main.async {
-            self.albums = fetchedAlbums
-            if let firstAlbum = fetchedAlbums.first(where: { $0.assetCollectionSubtype == .smartAlbumUserLibrary }) ?? fetchedAlbums.first {
-                self.selectedAlbum = firstAlbum
-            }
+        self.albums = fetchedAlbums
+        if let firstAlbum = fetchedAlbums.first(where: { $0.assetCollectionSubtype == .smartAlbumUserLibrary }) ?? fetchedAlbums.first {
+            self.selectedAlbum = firstAlbum
         }
     }
     
@@ -71,9 +69,7 @@ class PhotoLibraryManager: ObservableObject {
             tempAssets.append(asset)
         }
         
-        DispatchQueue.main.async {
-            self.assets = tempAssets
-        }
+        self.assets = tempAssets
     }
     
     /// Xuất ảnh từ PHAsset ra file cục bộ và trả về URL

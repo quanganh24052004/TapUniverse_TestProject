@@ -5,24 +5,38 @@
 
 import Foundation
 import SwiftUI
-import Combine
+import Observation
 
+@Observable
 @MainActor
-class ProjectDetailViewModel: ObservableObject {
-    @Published private(set) var selectedProjectDetail: ProjectDetail? = nil
-    @Published private(set) var isLoading: Bool = false
-    @Published private(set) var errorMessage: String? = nil
-    @Published private(set) var saveStatus: String = ""
+class ProjectDetailViewModel {
+    private(set) var selectedProjectDetail: ProjectDetail? = nil {
+        didSet {
+            if isFirstLoad {
+                isFirstLoad = false
+                return
+            }
+            if let detail = selectedProjectDetail {
+                scheduleAutoSave(detail)
+            }
+        }
+    }
+    private(set) var isLoading: Bool = false
+    private(set) var errorMessage: String? = nil
+    private(set) var saveStatus: String = ""
     
     // UI States
-    @Published var selectedPhotoId: UUID? = nil
-    @Published var isShowingPhotoPicker = false
-    @Published var isExporting = false
-    @Published var isShowingShareSheet = false
-    @Published var exportItem: UIImage? = nil
+    var selectedPhotoId: UUID? = nil
+    var isShowingPhotoPicker = false
+    var isExporting = false
+    var isShowingShareSheet = false
+    var exportItem: UIImage? = nil
     
-    private var cancellables = Set<AnyCancellable>()
+    @ObservationIgnored
     private var isFirstLoad = true
+    
+    @ObservationIgnored
+    private var saveTask: Task<Void, Never>?
     
     let projectId: Int
     let projectName: String
@@ -34,24 +48,19 @@ class ProjectDetailViewModel: ObservableObject {
         self.projectName = projectName
         self.networkService = networkService ?? NetworkManager.shared
         self.localRepository = localRepository ?? LocalProjectRepository.shared
-        
-        setupAutoSave()
     }
     
-    private func setupAutoSave() {
-        $selectedProjectDetail
-            .dropFirst() // Bỏ qua lần khởi tạo ban đầu (nil)
-            .debounce(for: .seconds(1.0), scheduler: RunLoop.main)
-            .sink { [weak self] updatedDetail in
-                guard let self = self, let detail = updatedDetail else { return }
-                // Bỏ qua lần gán đầu tiên từ loadProjectDetail()
-                if self.isFirstLoad {
-                    self.isFirstLoad = false
-                    return
-                }
+    private func scheduleAutoSave(_ detail: ProjectDetail) {
+        saveTask?.cancel()
+        saveTask = Task { @MainActor [weak self] in
+            do {
+                try await Task.sleep(nanoseconds: 1_000_000_000) // 1 second debounce
+                guard !Task.isCancelled, let self else { return }
                 self.saveProjectToLocalStorage(detail)
+            } catch {
+                // Task was cancelled
             }
-            .store(in: &cancellables)
+        }
     }
     
     /// Lấy thông tin chi tiết cấu hình Canvas (phục vụ hiển thị Screen 2).

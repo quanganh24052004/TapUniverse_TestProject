@@ -5,13 +5,14 @@
 
 import Foundation
 import SwiftUI
-import Combine
+import Observation
 
+@Observable
 @MainActor
-class ProjectListViewModel: ObservableObject {
-    @Published private(set) var projects: [Project] = []
-    @Published private(set) var isLoading: Bool = false
-    @Published private(set) var errorMessage: String? = nil
+class ProjectListViewModel {
+    private(set) var projects: [Project] = []
+    private(set) var isLoading: Bool = false
+    private(set) var errorMessage: String? = nil
     
     // Dependency Injection
     private let networkService: NetworkServiceProtocol

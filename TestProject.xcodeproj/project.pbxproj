@@ -169,11 +169,10 @@
 				0FB2D9303025D794002799F5 /* ProjectListView.swift */,
 				0FB2D9293025D794002799F5 /* AddProjectView.swift */,
 				0FB2D92F3025D794002799F5 /* ProjectDetailView.swift */,
-				0FB2D92A3025D794002799F5 /* AssetThumbnailView.swift */,
-				0FB2D92B3025D794002799F5 /* ContentView.swift */,
-				0FB2D92D3025D794002799F5 /* CustomPhotoPicker.swift */,
 				0FB2D92E3025D794002799F5 /* InteractiveCanvasView.swift */,
+				0FB2D92D3025D794002799F5 /* CustomPhotoPicker.swift */,
 				0FB2D9283025D794002799F5 /* ActivityView.swift */,
+				0FB2D92B3025D794002799F5 /* ContentView.swift */,
 			);
 			path = View;
 			sourceTree = "<group>";
@@ -209,6 +208,7 @@
 			children = (
 				0FB2D9313025D794002799F5 /* ProjectRow.swift */,
 				0FB2D92C3025D794002799F5 /* CustomOpacitySlider.swift */,
+				0FB2D92A3025D794002799F5 /* AssetThumbnailView.swift */,
 			);
 			path = Component;
 			sourceTree = "<group>";

@@ -132,7 +132,8 @@ struct InteractiveCanvasView: UIViewRepresentable {
                     
                     // Khắc phục triệt để: Đợi view hoàn tất layout trong hierarchy rồi mới áp dụng scale 
                     // để tránh bị UIKit ghi đè/tính sai transform ở frame đầu tiên.
-                    DispatchQueue.main.async {
+                    DispatchQueue.main.async { [weak newView, weak scrollView] in
+                        guard let newView, let scrollView else { return }
                         newView.updateCanvasZoomScale(scrollView.zoomScale)
                     }
                 }
@@ -146,8 +147,9 @@ struct InteractiveCanvasView: UIViewRepresentable {
         ///   - newFrame: Khung toạ độ mới (FrameRect).
         ///   - newRotation: Góc xoay mới (Double).
         func updatePhotoFrame(id: UUID, newFrame: FrameRect, newRotation: Double) {
-            DispatchQueue.main.async {
-                self.parent.onUpdatePhotoFrame(id, newFrame, newRotation)
+            DispatchQueue.main.async { [weak self] in
+                guard let self else { return }
+                parent.onUpdatePhotoFrame(id, newFrame, newRotation)
             }
         }
         
@@ -159,37 +161,41 @@ struct InteractiveCanvasView: UIViewRepresentable {
             }
             
             if parent.selectedPhotoId != id {
-                DispatchQueue.main.async {
-                    self.parent.onSelectPhoto(id)
+                DispatchQueue.main.async { [weak self] in
+                    guard let self else { return }
+                    parent.onSelectPhoto(id)
                 }
             }
         }
         
         func deletePhoto(id: UUID) {
-            DispatchQueue.main.async {
-                self.parent.onDeletePhoto(id)
+            DispatchQueue.main.async { [weak self] in
+                guard let self else { return }
+                parent.onDeletePhoto(id)
             }
         }
     }
 }
 
 // Lớp View cho phép Touch đi xuyên qua những phần trong suốt (bằng cách trả về nil nếu hit vào chính nó)
-class PassThroughView: UIView {
-    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
-        // Duyệt ngược danh sách subviews (view nào add sau/nổi lên trên thì xét trước)
-        for subview in subviews.reversed() {
-            guard subview.isUserInteractionEnabled, !subview.isHidden, subview.alpha >= 0.01 else { continue }
-            
-            // Chuyển đổi toạ độ sang subview
-            let pointInSubview = subview.convert(point, from: self)
-            
-            // Hỏi subview xem nó (hoặc con của nó) có nhận touch này không
-            if let hitView = subview.hitTest(pointInSubview, with: event) {
-                return hitView
+extension InteractiveCanvasView {
+    class PassThroughView: UIView {
+        override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+            // Duyệt ngược danh sách subviews (view nào add sau/nổi lên trên thì xét trước)
+            for subview in subviews.reversed() {
+                guard subview.isUserInteractionEnabled, !subview.isHidden, subview.alpha >= 0.01 else { continue }
+                
+                // Chuyển đổi toạ độ sang subview
+                let pointInSubview = subview.convert(point, from: self)
+                
+                // Hỏi subview xem nó (hoặc con của nó) có nhận touch này không
+                if let hitView = subview.hitTest(pointInSubview, with: event) {
+                    return hitView
+                }
             }
+            
+            // Nếu không có subview nào nhận (chạm vào nền trống), trả về nil để xuyên qua
+            return nil
         }
-        
-        // Nếu không có subview nào nhận (chạm vào nền trống), trả về nil để xuyên qua
-        return nil
     }
 }
