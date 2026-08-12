@@ -1,32 +1,36 @@
-//
-//  CanvasRenderer.swift
-//  TestProject
-//
-//  Created by quanganh on 3/8/26.
-//
-
 import UIKit
 import SwiftUI
 
+// MARK: - Canvas Renderer Service
+
+/// Service chịu trách nhiệm phẳng hóa (flattening) tất cả các layer ảnh trên Canvas
+/// và xuất ra khối dữ liệu hình ảnh JPEG hoàn chỉnh ở background thread.
 class CanvasRenderer {
     
-    /// Hàm kết xuất toàn bộ Canvas thành dữ liệu hình ảnh JPEG
+    // MARK: - Render Methods
+    
+    /// Kết xuất mảng dữ liệu `[PhotoFrame]` thành khối dữ liệu nén JPEG chất lượng cao
+    ///
+    /// - Parameters:
+    ///   - photos: Mảng chứa thông tin tọa độ, góc xoay, độ mờ và đường dẫn các bức ảnh
+    ///   - canvasSize: Kích thước khung nhìn hiện tại (Đã được chuẩn hóa lại theo `AppConstants.Canvas.defaultSize`)
+    /// - Returns: Khối dữ liệu nhị phân `Data` định dạng JPEG, hoặc `nil` nếu lỗi
     static func renderToJPEG(photos: [PhotoFrame], canvasSize: CGSize) -> Data? {
-        // 1. Ép cứng kích thước Canvas chuẩn theo AppConstants
+        // 1. Ép cứng kích thước Canvas mặt phẳng chuẩn (1000 x 1000)
         let targetSize = AppConstants.Canvas.defaultSize
         
-        // 2. Cấu hình định dạng scale cao hơn để ảnh nét gấp 3 lần (chuẩn Super Retina)
+        // 2. Cấu hình renderer độ phân giải cao (scale 3x cho Super Retina)
         let format = UIGraphicsImageRendererFormat()
         format.scale = 3.0
         format.opaque = true
         
         let renderer = UIGraphicsImageRenderer(size: targetSize, format: format)
         
-        // Tạo UIImage từ bộ dựng đồ họa
+        // 3. Tiến hành vẽ đồ họa off-screen lên Graphics Context
         let renderedImage = renderer.image { context in
             let cgContext = context.cgContext
             
-            // Đổ màu nền cho vùng canvas
+            // Đổ màu nền cho vùng không gian Canvas
             if let canvasColor = UIColor.canvas.cgColor as CGColor? {
                 cgContext.setFillColor(canvasColor)
             } else {
@@ -34,12 +38,14 @@ class CanvasRenderer {
             }
             cgContext.fill(CGRect(origin: .zero, size: targetSize))
             
+            // Duyệt từng layer bức ảnh theo thứ tự Z-Index từ dưới lên trên
             for photo in photos {
-                // 1. Lấy ảnh từ Cache để tăng tốc, nếu không có mới tải đồng bộ
+                // Step 1: Lấy ảnh từ ImageCacheManager để tối ưu hiệu năng
                 let uiImage: UIImage
                 if let cached = ImageCacheManager.shared.getImage(forKey: photo.url) {
                     uiImage = cached
                 } else {
+                    // Khôi phục đường dẫn tuyệt đối cho file local hoặc HTTP URL
                     let absoluteURL: URL?
                     if photo.url.starts(with: "http") {
                         absoluteURL = URL(string: photo.url)
@@ -55,14 +61,14 @@ class CanvasRenderer {
                         uiImage = downloaded
                         ImageCacheManager.shared.saveImage(downloaded, forKey: photo.url)
                     } else {
-                        continue
+                        continue // Bỏ qua nếu ảnh bị hỏng hoặc không thể nạp
                     }
                 }
                 
-                // Lưu lại trạng thái ngữ cảnh đồ họa trước khi biến đổi hình học
+                // Lưu lại trạng thái ma trận đồ họa trước khi áp dụng biến đổi
                 cgContext.saveGState()
                 
-                // 2. Thiết lập kích thước vẽ khung ảnh
+                // Step 2: Xác định khung hình chữ nhật vẽ ảnh
                 let rect = CGRect(
                     x: photo.frame.x,
                     y: photo.frame.y,
@@ -70,24 +76,24 @@ class CanvasRenderer {
                     height: photo.frame.height
                 )
                 
-                // 3. Thực hiện xoay ảnh quanh tâm của chính nó
+                // Step 3: Dịch chuyển gốc tọa độ và thực hiện xoay quanh tâm ảnh
                 let center = CGPoint(x: rect.midX, y: rect.midY)
                 cgContext.translateBy(x: center.x, y: center.y)
                 cgContext.rotate(by: CGFloat(Angle(degrees: photo.rotation).radians))
                 cgContext.translateBy(x: -center.x, y: -center.y)
                 
-                // 4. Áp dụng độ mờ Opacity từ Slider tùy chỉnh
+                // Step 4: Áp dụng độ mờ Opacity
                 let alpha = CGFloat(photo.opacity)
                 
-                // 5. Tiến hành vẽ ảnh lên CGContext
+                // Step 5: In bức ảnh lên Graphics Context
                 uiImage.draw(in: rect, blendMode: .normal, alpha: alpha)
                 
-                // Khôi phục lại trạng thái đồ họa ban đầu cho bức ảnh tiếp theo
+                // Khôi phục ma trận đồ họa ban đầu cho layer ảnh tiếp theo
                 cgContext.restoreGState()
             }
         }
         
-        // Trả về dữ liệu ảnh nén định dạng JPEG với chất lượng 100%
-        return renderedImage.jpegData(compressionQuality: 1)
+        // 4. Trả về dữ liệu ảnh nén định dạng JPEG chất lượng tối đa (100%)
+        return renderedImage.jpegData(compressionQuality: 1.0)
     }
 }

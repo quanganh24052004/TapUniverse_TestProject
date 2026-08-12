@@ -8,28 +8,68 @@
 import UIKit
 import SwiftUI
 
-// MARK: - 1. Properties & Initialization
+// MARK: - Photo Container View (Interactive Layer)
+
+/// View tương tác cho từng bức ảnh trên Canvas.
+/// Hỗ trợ kéo di chuyển, xoay 2 ngón, thu phóng pinch-to-zoom và kéo nắn 4 góc.
 class PhotoContainerView: UIView {
+    
+    // MARK: - Properties & Dependencies
+    
+    /// ID định danh duy nhất của bức ảnh
     var photoId: UUID
+    
+    /// Tham chiếu yếu (weak) trỏ về Coordinator để phát tín hiệu tương tác
     weak var coordinator: InteractiveCanvasView.Coordinator?
     
+    /// Dữ liệu Model hình ảnh hiện tại
     var currentPhotoData: PhotoFrame?
+    
+    /// Trạng thái ảnh đang được chọn trên Canvas
     var isSelected: Bool = false
     
+    // MARK: - Interaction Lock Mechanism
+    
+    /// Bộ đếm số lượng cử chỉ đang active đồng thời
     var activeInteractionsCount = 0
+    
+    /// Cờ kiểm tra người dùng có đang trực tiếp di ngón tay trên View hay không
     var isInteracting: Bool { return activeInteractionsCount > 0 }
     
+    // MARK: - UI Components
+    
+    /// Control hiển thị hình ảnh thô
     let imageView = UIImageView()
+    
+    /// Nút xóa ảnh (Nằm ở cạnh trên)
     let deleteButton = UIButton(type: .system)
+    
+    /// Danh sách 4 View đại diện cho 4 góc neo điều chỉnh kích thước
     var cornerHandles: [UIView] = []
+    
+    // MARK: - Gesture Recognizers
     
     private var panGesture: UIPanGestureRecognizer!
     private var pinchGesture: UIPinchGestureRecognizer!
     private var rotationGesture: UIRotationGestureRecognizer!
     
+    // MARK: - Geometry State Variables
+    
     var initialCenter = CGPoint.zero
     var initialBounds = CGRect.zero
     var initialTransform = CGAffineTransform.identity
+    
+    var anchorPointInSuper = CGPoint.zero
+    var initialDistanceInSuper: CGFloat = 0
+    
+    /// Tỷ lệ zoom hiện tại của Canvas ScrollView (Dùng để tính nghịch đảo kích thước UI)
+    var currentCanvasZoomScale: CGFloat = 1.0 {
+        didSet {
+            updateSubviewsFrames(isSelected: isSelected)
+        }
+    }
+    
+    // MARK: - Property Observers for Auto Sync
     
     override var center: CGPoint {
         didSet { imageView.center = center }
@@ -43,14 +83,7 @@ class PhotoContainerView: UIView {
         didSet { imageView.transform = transform }
     }
     
-    var anchorPointInSuper = CGPoint.zero
-    var initialDistanceInSuper: CGFloat = 0
-    
-    var currentCanvasZoomScale: CGFloat = 1.0 {
-        didSet {
-            updateSubviewsFrames(isSelected: isSelected)
-        }
-    }
+    // MARK: - Initialization
     
     init(photo: PhotoFrame, coordinator: InteractiveCanvasView.Coordinator) {
         self.photoId = photo.id
@@ -66,27 +99,31 @@ class PhotoContainerView: UIView {
         fatalError("init(coder:) has not been implemented")
     }
     
+    // MARK: - Setup UI & Photo Loading
+    
     private func setupView() {
         imageView.contentMode = .scaleAspectFill
         imageView.clipsToBounds = true
         self.layer.borderColor = UIColor.systemBlue.cgColor
 
+        // Cấu hình Nút xóa (SF Symbol)
         let config = UIImage.SymbolConfiguration(paletteColors: [.white, .systemRed])
         let sizeConfig = UIImage.SymbolConfiguration(pointSize: 24)
         let finalConfig = config.applying(sizeConfig)
         let minusImage = UIImage(systemName: "minus.circle.fill", withConfiguration: finalConfig)
         deleteButton.setImage(minusImage, for: .normal)
-        deleteButton.tintColor = .systemRed 
+        deleteButton.tintColor = .systemRed
 
         deleteButton.addTarget(self, action: #selector(handleDelete), for: .touchUpInside)
         addSubview(deleteButton)
         
+        // Khởi tạo 4 góc neo điều khiển (Corner Handles)
         let handleSize: CGFloat = 16
         for i in 0..<4 {
             let handle = UIView(frame: CGRect(x: 0, y: 0, width: handleSize, height: handleSize))
             handle.backgroundColor = .systemBlue
             handle.layer.cornerRadius = handleSize / 2
-            handle.tag = i
+            handle.tag = i // 0: Top-Left, 1: Top-Right, 2: Bottom-Left, 3: Bottom-Right
             handle.isUserInteractionEnabled = true
             
             let pan = UIPanGestureRecognizer(target: self, action: #selector(handleCornerPan(_:)))
@@ -98,6 +135,7 @@ class PhotoContainerView: UIView {
         }
     }
     
+    /// Nạp hình ảnh từ Cache, File đĩa cục bộ hoặc API
     private func loadPhoto(url: String) {
         if let cachedImage = ImageCacheManager.shared.getImage(forKey: url) {
             self.imageView.image = cachedImage
@@ -108,7 +146,6 @@ class PhotoContainerView: UIView {
         if url.starts(with: "http") {
             absoluteURL = URL(string: url)
         } else {
-            // Lấy tên file gốc (Bỏ qua đường dẫn tuyệt đối bị hỏng nếu có)
             let filename = (url as NSString).lastPathComponent
             if let docDir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
                 absoluteURL = docDir.appendingPathComponent(filename)
@@ -150,10 +187,13 @@ class PhotoContainerView: UIView {
     }
 }
 
-// MARK: - 2. Layout & Hit-Testing
+// MARK: - Layout & Hit-Testing Customization
+
 extension PhotoContainerView {
     
+    /// Kiểm tra thủ công điểm chạm cho nút xóa và 4 góc neo khi chúng nằm ngoài bounds của View
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        // 1. Kiểm tra điểm chạm vào Nút Xóa
         if !deleteButton.isHidden {
             let pointInButton = convert(point, to: deleteButton)
             if deleteButton.bounds.contains(pointInButton) {
@@ -161,6 +201,7 @@ extension PhotoContainerView {
             }
         }
         
+        // 2. Kiểm tra điểm chạm vào 4 Góc neo
         for handle in cornerHandles {
             if !handle.isHidden {
                 let pointInHandle = convert(point, to: handle)
@@ -170,6 +211,7 @@ extension PhotoContainerView {
             }
         }
         
+        // 3. Kiểm tra điểm chạm trong lòng bức ảnh
         if bounds.contains(point) {
             return self
         }
@@ -177,6 +219,7 @@ extension PhotoContainerView {
         return nil
     }
     
+    /// Cập nhật khung hình và nghịch đảo tỷ lệ Zoom cho các nút UI phụ thuộc
     func updateSubviewsFrames(isSelected: Bool) {
         let inverseScale = currentCanvasZoomScale > 0 ? (1.0 / currentCanvasZoomScale) : 1.0
         
@@ -201,9 +244,11 @@ extension PhotoContainerView {
     }
 }
 
-// MARK: - 3. Update Data (SwiftUI Sync)
+// MARK: - SwiftUI Data Synchronization
+
 extension PhotoContainerView {
     
+    /// Cập nhật thuộc tính hình học từ SwiftUI Model sang UIKit View
     func update(with photo: PhotoFrame, isSelected: Bool) {
         if self.currentPhotoData == photo && self.isSelected == isSelected {
             return
@@ -212,10 +257,12 @@ extension PhotoContainerView {
         self.currentPhotoData = photo
         self.isSelected = isSelected
         
+        // Bật/tắt cử chỉ theo trạng thái chọn
         panGesture?.isEnabled = isSelected
         pinchGesture?.isEnabled = isSelected
         rotationGesture?.isEnabled = isSelected
         
+        // Cập nhật Bounds, Center và Rotation Transform
         bounds = CGRect(x: 0, y: 0, width: photo.frame.width, height: photo.frame.height)
         center = CGPoint(x: photo.frame.x + photo.frame.width/2, y: photo.frame.y + photo.frame.height/2)
         transform = CGAffineTransform(rotationAngle: CGFloat(Angle(degrees: photo.rotation).radians))
@@ -229,10 +276,12 @@ extension PhotoContainerView {
         }
     }
     
+    /// Cập nhật tỷ lệ thu phóng toàn Canvas
     func updateCanvasZoomScale(_ scale: CGFloat) {
         currentCanvasZoomScale = scale
     }
     
+    /// Đóng gói vị trí, kích thước và góc xoay hiện tại để gửi về SwiftUI Binding
     func saveCurrentState() {
         let currentWidth = bounds.width
         let currentHeight = bounds.height
@@ -248,7 +297,8 @@ extension PhotoContainerView {
     }
 }
 
-// MARK: - 4. Gesture Recognizers
+// MARK: - Gesture Recognizers & Multi-Touch Handlers
+
 extension PhotoContainerView: UIGestureRecognizerDelegate {
     
     func setupGestures() {
@@ -277,6 +327,7 @@ extension PhotoContainerView: UIGestureRecognizerDelegate {
         coordinator?.selectPhoto(id: photoId)
     }
     
+    /// Xử lý kéo di chuyển View trên Canvas
     @objc func handlePan(_ gesture: UIPanGestureRecognizer) {
         guard let superview = superview else { return }
         switch gesture.state {
@@ -296,6 +347,7 @@ extension PhotoContainerView: UIGestureRecognizerDelegate {
         }
     }
     
+    /// Xử lý thu phóng 2 ngón tay (Pinch-to-zoom) theo Anchor Point
     @objc func handlePinch(_ gesture: UIPinchGestureRecognizer) {
         switch gesture.state {
         case .began:
@@ -333,6 +385,7 @@ extension PhotoContainerView: UIGestureRecognizerDelegate {
         }
     }
     
+    /// Xử lý xoay 2 ngón tay (Rotation) theo Anchor Point
     @objc func handleRotation(_ gesture: UIRotationGestureRecognizer) {
         switch gesture.state {
         case .began:
@@ -369,6 +422,7 @@ extension PhotoContainerView: UIGestureRecognizerDelegate {
         }
     }
     
+    /// Xử lý kéo nắn kích thước từ 4 góc neo (Corner Handles)
     @objc func handleCornerPan(_ gesture: UIPanGestureRecognizer) {
         guard let handle = gesture.view, let superview = self.superview else { return }
         
@@ -436,6 +490,7 @@ extension PhotoContainerView: UIGestureRecognizerDelegate {
         }
     }
     
+    /// Bật chế độ nhận diện nhiều cử chỉ đồng thời (Pan + Pinch + Rotate)
     func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
         return gestureRecognizer.view == self && otherGestureRecognizer.view == self
     }

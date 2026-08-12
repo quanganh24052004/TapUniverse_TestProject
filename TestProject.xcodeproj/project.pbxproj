@@ -19,7 +19,6 @@
 		0FB2D9423025D794002799F5 /* ActivityView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FB2D9283025D794002799F5 /* ActivityView.swift */; };
 		0FB2D9433025D794002799F5 /* AddProjectView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FB2D9293025D794002799F5 /* AddProjectView.swift */; };
 		0FB2D9443025D794002799F5 /* AssetThumbnailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FB2D92A3025D794002799F5 /* AssetThumbnailView.swift */; };
-		0FB2D9453025D794002799F5 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FB2D92B3025D794002799F5 /* ContentView.swift */; };
 		0FB2D9463025D794002799F5 /* CustomOpacitySlider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FB2D92C3025D794002799F5 /* CustomOpacitySlider.swift */; };
 		0FB2D9473025D794002799F5 /* CustomPhotoPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FB2D92D3025D794002799F5 /* CustomPhotoPicker.swift */; };
 		0FB2D9483025D794002799F5 /* InteractiveCanvasView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FB2D92E3025D794002799F5 /* InteractiveCanvasView.swift */; };
@@ -55,7 +54,6 @@
 		0FB2D9283025D794002799F5 /* ActivityView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityView.swift; sourceTree = "<group>"; };
 		0FB2D9293025D794002799F5 /* AddProjectView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddProjectView.swift; sourceTree = "<group>"; };
 		0FB2D92A3025D794002799F5 /* AssetThumbnailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssetThumbnailView.swift; sourceTree = "<group>"; };
-		0FB2D92B3025D794002799F5 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		0FB2D92C3025D794002799F5 /* CustomOpacitySlider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomOpacitySlider.swift; sourceTree = "<group>"; };
 		0FB2D92D3025D794002799F5 /* CustomPhotoPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomPhotoPicker.swift; sourceTree = "<group>"; };
 		0FB2D92E3025D794002799F5 /* InteractiveCanvasView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InteractiveCanvasView.swift; sourceTree = "<group>"; };
@@ -172,7 +170,6 @@
 				0FB2D92E3025D794002799F5 /* InteractiveCanvasView.swift */,
 				0FB2D92D3025D794002799F5 /* CustomPhotoPicker.swift */,
 				0FB2D9283025D794002799F5 /* ActivityView.swift */,
-				0FB2D92B3025D794002799F5 /* ContentView.swift */,
 			);
 			path = View;
 			sourceTree = "<group>";
@@ -180,7 +177,6 @@
 		0FB2D9363025D794002799F5 /* ViewModel */ = {
 			isa = PBXGroup;
 			children = (
-				0FB2D9333025D794002799F5 /* PhotoLibraryManager.swift */,
 				0FB2D9343025D794002799F5 /* ProjectDetailViewModel.swift */,
 				0FB2D9353025D794002799F5 /* ProjectListViewModel.swift */,
 			);
@@ -191,13 +187,14 @@
 			isa = PBXGroup;
 			children = (
 				0FB2D91B3025D794002799F5 /* App */,
-				0FB2D9323025D794002799F5 /* View */,
-				0FB2D91D3025D794002799F5 /* Extension */,
 				0FB2D91F3025D794002799F5 /* Model */,
+				0FB2D9323025D794002799F5 /* View */,
+				0FB2D9363025D794002799F5 /* ViewModel */,
+				0FF00455302C2DC20003B7C6 /* Manager */,
+				0FB2D91D3025D794002799F5 /* Extension */,
 				0FB2D9213025D794002799F5 /* Network */,
 				0FB2D9233025D794002799F5 /* Repository */,
 				0FB2D9273025D794002799F5 /* Utils */,
-				0FB2D9363025D794002799F5 /* ViewModel */,
 				0FB2D9373025D794002799F5 /* Assets.xcassets */,
 			);
 			path = TestProject;
@@ -211,6 +208,14 @@
 				0FB2D92A3025D794002799F5 /* AssetThumbnailView.swift */,
 			);
 			path = Component;
+			sourceTree = "<group>";
+		};
+		0FF00455302C2DC20003B7C6 /* Manager */ = {
+			isa = PBXGroup;
+			children = (
+				0FB2D9333025D794002799F5 /* PhotoLibraryManager.swift */,
+			);
+			path = Manager;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -331,7 +336,6 @@
 				0FB2D9423025D794002799F5 /* ActivityView.swift in Sources */,
 				0FB2D9433025D794002799F5 /* AddProjectView.swift in Sources */,
 				0FB2D9443025D794002799F5 /* AssetThumbnailView.swift in Sources */,
-				0FB2D9453025D794002799F5 /* ContentView.swift in Sources */,
 				0FB2D9463025D794002799F5 /* CustomOpacitySlider.swift in Sources */,
 				0FB2D9473025D794002799F5 /* CustomPhotoPicker.swift in Sources */,
 				0FB2D9483025D794002799F5 /* InteractiveCanvasView.swift in Sources */,

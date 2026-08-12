@@ -7,9 +7,16 @@ import Foundation
 import SwiftUI
 import Observation
 
+// MARK: - Project Detail ViewModel
+
+/// ViewModel quản lý dữ liệu chi tiết Canvas, các thao tác chỉnh sửa ảnh, tự động lưu ngầm và kết xuất hình ảnh.
 @Observable
 @MainActor
 class ProjectDetailViewModel {
+    
+    // MARK: - Observable Properties (State & UI)
+    
+    /// Thông tin chi tiết Canvas dự án. Khi thay đổi sẽ tự động kích hoạt Auto-save ngầm
     private(set) var selectedProjectDetail: ProjectDetail? = nil {
         didSet {
             if isFirstLoad {
@@ -21,54 +28,88 @@ class ProjectDetailViewModel {
             }
         }
     }
+    
+    /// Trạng thái đang tải dữ liệu Canvas
     private(set) var isLoading: Bool = false
+    
+    /// Thông báo lỗi hiển thị trên UI
     private(set) var errorMessage: String? = nil
+    
+    /// Chuỗi hiển thị trạng thái lưu (ví dụ: "Đang lưu...", "Đã lưu cục bộ lúc...")
     private(set) var saveStatus: String = ""
     
-    // UI States
+    // MARK: - UI States
+    
+    /// ID của bức ảnh đang được chọn trên Canvas
     var selectedPhotoId: UUID? = nil
+    
+    /// Trạng thái ẩn/hiện Sheet chọn ảnh từ thư viện
     var isShowingPhotoPicker = false
+    
+    /// Trạng thái xoay ProgressView khi đang phẳng hóa (render) Canvas
     var isExporting = false
+    
+    /// Trạng thái ẩn/hiện Share Sheet
     var isShowingShareSheet = false
+    
+    /// Bức ảnh `UIImage` đã xuất để sẵn sàng chia sẻ
     var exportItem: UIImage? = nil
     
+    // MARK: - Observation Ignored Properties
+    
+    /// Cờ đánh dấu lần nạp dữ liệu đầu tiên để tránh kích hoạt Auto-save dư thừa
     @ObservationIgnored
     private var isFirstLoad = true
     
+    /// Task quản lý việc trì hoãn (Debounce) tiến trình Auto-save
     @ObservationIgnored
     private var saveTask: Task<Void, Never>?
+    
+    // MARK: - Dependencies & Init Parameters
     
     let projectId: Int
     let projectName: String
     private let networkService: NetworkServiceProtocol
     private let localRepository: LocalProjectRepositoryProtocol
     
-    init(projectId: Int, projectName: String, networkService: NetworkServiceProtocol? = nil, localRepository: LocalProjectRepositoryProtocol? = nil) {
+    // MARK: - Initialization
+    
+    init(
+        projectId: Int,
+        projectName: String,
+        networkService: NetworkServiceProtocol? = nil,
+        localRepository: LocalProjectRepositoryProtocol? = nil
+    ) {
         self.projectId = projectId
         self.projectName = projectName
         self.networkService = networkService ?? NetworkManager.shared
         self.localRepository = localRepository ?? LocalProjectRepository.shared
     }
     
+    // MARK: - Auto Save & Debounce Logic
+    
+    /// Thiết lập lịch lưu ngầm tự động với khoảng hoãn (Debounce) 1 giây
     private func scheduleAutoSave(_ detail: ProjectDetail) {
         saveTask?.cancel()
         saveTask = Task { @MainActor [weak self] in
             do {
-                try await Task.sleep(nanoseconds: 1_000_000_000) // 1 second debounce
+                try await Task.sleep(nanoseconds: 1_000_000_000) // Debounce 1s
                 guard !Task.isCancelled, let self else { return }
                 self.saveProjectToLocalStorage(detail)
             } catch {
-                // Task was cancelled
+                // Task bị hủy khi người dùng tiếp tục thao tác
             }
         }
     }
     
-    /// Lấy thông tin chi tiết cấu hình Canvas (phục vụ hiển thị Screen 2).
+    // MARK: - Load & Sync Operations
+    
+    /// Tải thông tin chi tiết cấu hình Canvas (Ưu tiên nạp từ Local Storage)
     func loadProjectDetail() async {
         isLoading = true
         errorMessage = nil
         
-        // 1. Ưu tiên load từ Local Storage trước
+        // 1. Ưu tiên nạp dữ liệu từ Local Storage
         if let localDetail = loadProjectFromLocalStorage() {
             self.selectedProjectDetail = localDetail
             self.saveStatus = "Đã tải từ máy"
@@ -76,19 +117,19 @@ class ProjectDetailViewModel {
             return
         }
         
-        // 2. Nếu không có local, thử gọi API
+        // 2. Nếu local chưa có, gọi API lấy dữ liệu từ server
         do {
             self.selectedProjectDetail = try await networkService.fetchProjectDetail(projectId: projectId)
             self.saveStatus = "Đã tải từ máy chủ"
         } catch {
-            // Xử lý ngoại lệ khi vừa tạo dự án mới (chưa có trên server)
+            // Khởi tạo Canvas rỗng nếu dự án mới tạo chưa tồn tại trên server
             self.selectedProjectDetail = ProjectDetail(id: projectId, name: projectName, photos: [])
             self.saveStatus = "Đã khởi tạo"
         }
         isLoading = false
     }
     
-    /// Đồng bộ hoá (lưu) thông tin dự án hiện tại lên Server (Giai đoạn 6).
+    /// Đồng bộ thông tin dự án hiện tại lên Server ngầm
     func saveProject() async {
         guard let projectDetail = selectedProjectDetail else { return }
         saveStatus = "Đang đồng bộ..."
@@ -100,47 +141,71 @@ class ProjectDetailViewModel {
         }
     }
     
-    // MARK: - Local Storage
+    // MARK: - Local Storage Pipeline
     
+    /// Thực hiện đóng mốc thời gian `updatedAt` và lưu tức thì trước khi đóng màn hình
     func prepareForExit() {
         guard var detail = selectedProjectDetail else { return }
-        detail.updatedAt = Date()
+        let now = Date()
+        detail.updatedAt = now
         self.selectedProjectDetail = detail
         
         self.saveStatus = "Đang lưu..."
+        
+        // 1. Lưu Tầng 2 (Detail Canvas)
         localRepository.saveProjectDetail(detail)
+        
+        // 2. Cập nhật Tầng 1 (Meta List): Đóng mốc thời gian mới cho danh sách tổng
+        var currentProjects = localRepository.loadProjects()
+        if let index = currentProjects.firstIndex(where: { $0.id == detail.id }) {
+            currentProjects[index].updatedAt = now
+            localRepository.saveProjects(currentProjects)
+        }
+        
         let formatter = DateFormatter()
         formatter.dateFormat = "HH:mm:ss"
-        self.saveStatus = "Đã lưu cục bộ lúc \(formatter.string(from: Date()))"
+        self.saveStatus = "Đã lưu cục bộ lúc \(formatter.string(from: now))"
     }
     
+    /// Lưu dữ liệu Canvas và cập nhật danh sách tổng xuống Local Storage
     private func saveProjectToLocalStorage(_ detail: ProjectDetail) {
         self.saveStatus = "Đang lưu..."
         var updatedDetail = detail
-        updatedDetail.updatedAt = Date()
+        let now = Date()
+        updatedDetail.updatedAt = now
         
+        // 1. Lưu Tầng 2 (Detail Canvas)
         localRepository.saveProjectDetail(updatedDetail)
+        
+        // 2. Cập nhật Tầng 1 (Meta List)
+        var currentProjects = localRepository.loadProjects()
+        if let index = currentProjects.firstIndex(where: { $0.id == detail.id }) {
+            currentProjects[index].updatedAt = now
+            localRepository.saveProjects(currentProjects)
+        }
         
         let formatter = DateFormatter()
         formatter.dateFormat = "HH:mm:ss"
-        self.saveStatus = "Đã lưu cục bộ lúc \(formatter.string(from: Date()))"
+        self.saveStatus = "Đã lưu cục bộ lúc \(formatter.string(from: now))"
     }
     
+    /// Đọc chi tiết dự án từ Local Storage
     private func loadProjectFromLocalStorage() -> ProjectDetail? {
         return localRepository.loadProjectDetail(projectId: projectId)
     }
     
-    /// Thêm một hoặc nhiều ảnh mới từ URL vào chính giữa không gian Canvas.
-    ///
+    // MARK: - Canvas Photo Operations
+    
+    /// Thêm một hoặc nhiều ảnh mới từ URL vào giữa Canvas (Tự tính toán aspect ratio gốc)
     /// - Parameters:
-    ///   - urls: Mảng chứa các đường dẫn (URL) của hình ảnh cần chèn.
-    ///   - selectedPhotoId: Trạng thái `inout` để trỏ vào ảnh cuối cùng được thêm vào.
+    ///   - urls: Mảng đường dẫn file ảnh cần thêm
+    ///   - selectedPhotoId: Binding cập nhật ID ảnh vừa được thêm vào
     func addPhotos(urls: [String], into selectedPhotoId: inout UUID?) {
         for url in urls {
             var width: Double = 300
             var height: Double = 300
             
-            // Khôi phục tỷ lệ (aspect ratio) gốc của bức ảnh từ file local
+            // Khôi phục tỷ lệ khung hình (Aspect Ratio) gốc của bức ảnh từ file local
             if let imageURL = URL(string: url),
                imageURL.isFileURL,
                let image = UIImage(contentsOfFile: imageURL.path) {
@@ -159,7 +224,7 @@ class ProjectDetailViewModel {
             
             let newPhoto = PhotoFrame(
                 url: url,
-                frame: FrameRect(x: 500 - width/2, y: 500 - height/2, width: width, height: height), // Đặt ngay giữa Canvas 1000x1000
+                frame: FrameRect(x: 500 - width/2, y: 500 - height/2, width: width, height: height), // Đặt giữa Canvas 1000x1000
                 rotation: 0.0,
                 opacity: 1.0
             )
@@ -168,8 +233,7 @@ class ProjectDetailViewModel {
         }
     }
     
-    // MARK: - Photo Operations (MVVM Logic)
-    
+    /// Xóa bức ảnh khỏi Canvas
     func deletePhoto(id: UUID) {
         selectedProjectDetail?.photos.removeAll { $0.id == id }
         if selectedPhotoId == id {
@@ -177,6 +241,7 @@ class ProjectDetailViewModel {
         }
     }
     
+    /// Đưa bức ảnh được chọn lên trên cùng của Z-Index Layer
     func bringPhotoToFront(id: UUID) {
         guard let index = selectedProjectDetail?.photos.firstIndex(where: { $0.id == id }) else { return }
         let photo = selectedProjectDetail!.photos.remove(at: index)
@@ -184,17 +249,21 @@ class ProjectDetailViewModel {
         selectedPhotoId = id
     }
     
+    /// Cập nhật tọa độ / kích thước / góc xoay của ảnh
     func updatePhoto(_ updatedPhoto: PhotoFrame) {
         guard let index = selectedProjectDetail?.photos.firstIndex(where: { $0.id == updatedPhoto.id }) else { return }
         selectedProjectDetail?.photos[index] = updatedPhoto
     }
     
+    /// Cập nhật độ mờ (Opacity) của ảnh
     func updatePhotoOpacity(id: UUID, opacity: Double) {
         guard let index = selectedProjectDetail?.photos.firstIndex(where: { $0.id == id }) else { return }
         selectedProjectDetail?.photos[index].opacity = opacity
     }
     
-    /// Bắt đầu quá trình kết xuất ảnh. Cập nhật các UI state tương ứng.
+    // MARK: - Export Canvas Operations
+    
+    /// Khởi chạy quá trình kết xuất Canvas và hiển thị Share Sheet
     func triggerExportCanvas() {
         isExporting = true
         exportCanvas { [weak self] image in
@@ -209,10 +278,7 @@ class ProjectDetailViewModel {
     
     typealias ExportCompletionHandler = (UIImage?) -> Void
     
-    /// Kết xuất toàn bộ cấu trúc Canvas hiện tại thành một bức ảnh thực tế (JPEG).
-    /// Quá trình này được đẩy sang Background Queue để không làm chặn (block) giao diện người dùng.
-    ///
-    /// - Parameter completion: Hàm callback trả về `UIImage` hoàn chỉnh, hoặc `nil` nếu rỗng/lỗi.
+    /// Kết xuất toàn bộ Canvas thành file JPEG (Chạy trên Background Thread)
     func exportCanvas(completion: @escaping ExportCompletionHandler) {
         guard let photos = selectedProjectDetail?.photos, !photos.isEmpty else {
             completion(nil)
